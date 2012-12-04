@@ -8,10 +8,9 @@ import os
 
 
 class Export(andesicore.SIGeneral):
-    def __init__(self, xsi, path='E:\\'):
+    def __init__(self, xsi, config):
         self.xsi = xsi
-        self.config = {'path': path,
-                        'rcpath': 'E:\\AndeSoft\\CE_343\\Bin32\\rc'}
+        self.config = config
 
     def create_options(self):
         for prop in self.xsi.ActiveSceneRoot.Properties:
@@ -28,20 +27,20 @@ class Export(andesicore.SIGeneral):
         options.AddParameter3('ExportGeometries', const.siBool, True)
         options.AddParameter3('ExportImageClips', const.siBool, True)  # not sure about that.
         options.AddParameter3('ExportUsedMaterialsAndImagesOnly', const.siBool, True)  # not sure either.
-        options.AddParameter3('ExportAnimation', const.siBool, False)  # for now disabled.
+        options.AddParameter3('ExportAnimation', const.siBool, True)  # for now disabled.
         options.AddParameter3('ApplySubdivisionToGeometry', const.siBool, False)  # nope.
         options.AddParameter3('Triangulate', const.siBool, True)  # sure.
         options.AddParameter3('ExportTangentsAsVtxColor', const.siBool, False)  # nope.
-        options.AddParameter3('ShapeAnim', const.siBool, False)  # maybe in the future.
+        options.AddParameter3('ShapeAnim', const.siInt4, 1)  # maybe in the future.
         options.AddParameter3('PlotAnimation', const.siBool, False)  # maybe.
         options.AddParameter3('PlotNonFCurveActionSources', const.siBool, False)  # maybe?
         options.AddParameter3('PlotStartFrame', const.siInt4, 1)  # need to set that from playcontrol.
         options.AddParameter3('PlotEndFrame', const.siInt4, 1)  # that one, too.
         options.AddParameter3('PlotStepFrame', const.siDouble, 1.0)  # should be Ok like this.
         options.AddParameter3('PlotInterpolation', const.siInt4, 0)  # ?
-        options.AddParameter3('PlotFit', const.siBool, False)  # ?
+        options.AddParameter3('PlotFit', const.siBool, True)  # ?
         options.AddParameter3('PlotFitTolerance', const.siDouble, 1.0)  # ?
-        options.AddParameter3('PlotProcessRotation', const.siBool, False)  # ?
+        options.AddParameter3('PlotProcessRotation', const.siBool, True)  # ?
         options.AddParameter3('ExportXSINormals', const.siBool, True)  # yes for normals.
         options.AddParameter3('PreserveIK', const.siBool, False)  # maybe in the future?
         options.AddParameter3('Target', const.siInt4, 0)  # not important.
@@ -57,7 +56,7 @@ class Export(andesicore.SIGeneral):
         self.selection = self.xsi.Selection(0)
         if not self.selection:
             raise SystemExit
-        self.hierarchy = self.get_all_children(self.selection)
+        # self.hierarchy = self.get_all_children(self.selection)
         lib = self.xsi.ActiveProject.ActiveScene.ActiveMaterialLibrary
         self.materials = []
         for ind, mat in enumerate(lib.Items):
@@ -72,7 +71,7 @@ class Export(andesicore.SIGeneral):
     def do_export(self):
         self.create_options()
         self.xsi.ExportCrosswalk('SCCrosswalkOptions')
-        ed = crydaemon.ColladaEditor(self.config['path'], self.materials)
+        ed = crydaemon.ColladaEditor(self.config, self.materials)
         ed.prepare_for_rc()
         exepath = os.path.join(self.config['rcpath'], 'rc.exe')
         p = subprocess.Popen((exepath, '{0}'.format(self.config['path'])), stdout=subprocess.PIPE)

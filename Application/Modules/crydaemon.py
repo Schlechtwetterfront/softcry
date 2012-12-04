@@ -1,4 +1,4 @@
-from xml.etree.ElementTree import ElementTree, Element, SubElement, dump
+from xml.etree.ElementTree import ElementTree, SubElement  # , dump, Element
 import os
 
 MATERIAL_PHYS = ('physDefault',  # default collision
@@ -23,12 +23,28 @@ class CryMaterial(object):
 
 
 class ColladaEditor(object):
-    def __init__(self, path, materials):
-        self.path = path
+    def __init__(self, config, materials):
+        self.config = config
         self.tree = None
         self.vertex_count = 0
-        self.scene_name = os.path.basename(self.path)[:-4]
+        self.scene_name = os.path.basename(self.config['path'])[:-4]
         self.materials = self.adjust_materials(materials)
+        self.controllers = {}
+
+    def indent(self, elem, level=0):
+        i = '\n' + level * '\t'
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + '\t'
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+            for elem in elem:
+                self.indent(elem, level + 1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
 
     def adjust_materials(self, materials):
         dc = {}
@@ -37,7 +53,7 @@ class ColladaEditor(object):
         return dc
 
     def get_adjusted(self):
-        with open(self.path, 'r') as fh:
+        with open(self.config['path'], 'r') as fh:
             newfile = []
             for line in fh:
                 if line[:2] == '<?':
@@ -51,6 +67,17 @@ class ColladaEditor(object):
                     newfile.append(line)
             return newfile
 
+    def replace_technique_source(self, tech_node, to_replace, with_this):
+        acc = tech_node.find('accessor')
+        if acc is not None:
+            acc.set('source', acc.get('source').replace(to_replace, with_this))
+
+    def replace_id(self, source_node, replace_this, with_this):
+        source_node.set('id', source_node.get('id').replace(replace_this, with_this))
+
+    def replace(self, node, attribute, to_replace, with_this):
+        node.set(attribute, node.get(attribute).replace(to_replace, with_this))
+
     def prepare_library_geometries(self):
         lib_geoms = self.root.find('library_geometries')
         for geom in lib_geoms:
@@ -62,8 +89,8 @@ class ColladaEditor(object):
             #   Normals             XSINormal           normals
             #   UV coords           Texture_Projection  coords
             for source in sources:
-                if 'Pos' in source.attrib['id']:
-                    source.attrib['id'] = source.attrib['id'].replace('Pos', 'positions')
+                if 'Pos' in source.get('id'):
+                    source.set('id', source.get('id').replace('Pos', 'positions'))
                     f_array = source.find('float_array')
                     f_array.attrib['id'] = f_array.attrib['id'].replace('Pos', 'positions')
                     acc = source.find('technique_common').find('accessor')
@@ -113,8 +140,13 @@ class ColladaEditor(object):
         extra = SubElement(cryexportnode, 'extra')
         tech = SubElement(extra, 'technique', profile='CryEngine')
         props = SubElement(tech, 'properties')
-        # TODO: replace flags from UI.
-        props.text = 'fileType=cgf DoNotMerge UseCustomNormals'
+        ft = 'fileType={0}'.format(self.config['filetype'])
+        flags = [ft]
+        if self.config['donotmerge']:
+            flags.append('DoNotMerge')
+        if self.config['customnormals']:
+            flags.append('CustomNormals')
+        props.text = '\n'.join(flags)
         # Remove nodes.
         for node in root_nodes:
             vis_scene.remove(node)
@@ -128,16 +160,21 @@ class ColladaEditor(object):
         self.adjust_instance_materials(rootnode)
 
     def adjust_instance_materials(self, node):
-        inst_geo = node.find('instance_geometry')
-        if inst_geo is not None:
-            bind_mat = inst_geo.find('bind_material')
-            if bind_mat is not None:
-                tech = bind_mat.find('technique_common')
-                if tech is not None:
-                    for inst_mat in tech:
-                        newname = self.materials[inst_mat.attrib['symbol']]
-                        inst_mat.attrib['symbol'] = newname
-                        inst_mat.attrib['target'] = '#{0}'.format(newname)
+        inst = node.find('instance_geometry')
+        if inst is None:
+            inst = node.find('instance_controller')
+            if inst is None:
+                return
+            else:
+                inst.set('url', '#{0}'.format(self.controllers[inst.get('url')[1:]]))
+        bind_mat = inst.find('bind_material')
+        if bind_mat is not None:
+            tech = bind_mat.find('technique_common')
+            if tech is not None:
+                for inst_mat in tech:
+                    newname = self.materials[inst_mat.attrib['symbol']]
+                    inst_mat.attrib['symbol'] = newname
+                    inst_mat.attrib['target'] = '#{0}'.format(newname)
 
     def remove_library_effects(self):
         effects = self.root.find('library_effects')
@@ -150,8 +187,127 @@ class ColladaEditor(object):
             lib_mat.attrib['id'] = newname
             lib_mat.attrib['name'] = newname
 
+    def prepare_library_controllers(self):
+        lib_controllers = self.root.find('library_controllers')
+        if lib_controllers is None:
+            return
+        for controller in lib_controllers:
+            for skin in controller:
+                geo_name = skin.get('source')[1:]
+                cname = controller.get('id')
+                controller.set('id', '{0}_{1}'.format(cname, geo_name))
+                self.controllers[cname] = controller.get('id')
+                sources = skin.findall('source')
+                for source in sources:
+                    if 'Joints' in source.get('id'):
+                        self.replace_id(source, 'Joints', 'joints')
+                        idref = source.find('IDREF_array')
+                        if idref is not None:
+                            idref.set('id', idref.get('id').replace('Joints', 'joints'))
+                        tech = source.find('technique_common')
+                        self.replace_technique_source(tech, 'Joints', 'joints')
+                    elif 'Matrices' in source.get('id'):
+                        self.replace_id(source, 'Matrices', 'matrices')
+                        self.replace_id(source.find('float_array'), 'Matrices', 'matrices')
+                        self.replace_technique_source(source.find('technique_common'), 'Matrices', 'matrices')
+                    elif 'Weights' in source.get('id'):
+                        self.replace_id(source, 'Weights', 'weights')
+                        self.replace_id(source.find('float_array'), 'Weights', 'weights')
+                        self.replace_technique_source(source.find('technique_common'), 'Weights', 'weights')
+                joints = skin.find('joints')
+                if joints is not None:
+                    for input_ in joints:
+                        if 'Joints' in input_.get('source'):
+                            self.replace(input_, 'source', 'Joints', 'joints')
+                        elif 'Matrices' in input_.get('source'):
+                            self.replace(input_, 'source', 'Matrices', 'matrices')
+                v_weights = skin.find('vertex_weights')
+                if v_weights is not None:
+                    inputs = v_weights.findall('input')
+                    for input_ in inputs:
+                        if 'Joints' in input_.get('source'):
+                            self.replace(input_, 'source', 'Joints', 'joints')
+                        elif 'Weights' in input_.get('source'):
+                            self.replace(input_, 'source', 'Weights', 'weights')
+
+    def prepare_library_animations(self):
+        lib_anims = self.root.find('library_animations')
+        for anim in lib_anims:
+            to_replace = None
+            with_this = None
+            if 'translation_X' in anim.get('id'):
+                to_replace = 'translation_X-anim'
+                with_this = 'location_X'
+            elif 'translation_Y' in anim.get('id'):
+                to_replace = 'translation_Y-anim'
+                with_this = 'location_Y'
+            elif 'translation_Z' in anim.get('id'):
+                to_replace = 'translation_Z-anim'
+                with_this = 'location_Z'
+            elif 'rotation_x_ANGLE' in anim.get('id'):
+                to_replace = 'rotation_x_ANGLE-anim'
+                with_this = 'rotation_euler_X'
+            elif 'rotation_y_ANGLE' in anim.get('id'):
+                to_replace = 'rotation_y_ANGLE-anim'
+                with_this = 'rotation_euler_Y'
+            elif 'rotation_z_ANGLE' in anim.get('id'):
+                to_replace = 'rotation_z_ANGLE-anim'
+                with_this = 'rotation_euler_Z'
+            self.replace_id(anim, to_replace, with_this)
+            for source in anim.findall('source'):
+                self.replace_id(source, to_replace, with_this)
+                self.replace_technique_source(source.find('technique_common'), to_replace, with_this)
+                farray = source.find('float_array')
+                if farray is None:
+                    farray = source.find('Name_array')
+                self.replace_id(farray, to_replace, with_this)
+                if 'InTan' in source.get('id'):
+                    self.replace_id(source, 'InTan', 'intangent')
+                    self.replace_technique_source(source.find('technique_common'), 'InTan', 'intangent')
+                    self.replace_id(source.find('float_array'), 'InTan', 'intangent')
+                elif 'OutTan' in source.get('id'):
+                    self.replace_id(source, 'OutTan', 'outtangent')
+                    self.replace_technique_source(source.find('technique_common'), 'OutTan', 'outtangent')
+                    self.replace_id(source.find('float_array'), 'OutTan', 'outtangent')
+                elif 'interp' in source.get('id'):
+                    self.replace_id(source, 'interp', 'interpolation')
+                    self.replace_technique_source(source.find('technique_common'), 'interp', 'interpolation')
+                    self.replace_id(source.find('Name_array'), 'interp', 'interpolation')
+            sampler = anim.find('sampler')
+            if sampler is not None:
+                self.replace_id(sampler, to_replace, with_this)
+                for input_ in sampler:
+                    self.replace(input_, 'source', to_replace, with_this)
+                    self.replace(input_, 'source', 'InTan', 'intangent')
+                    self.replace(input_, 'source', 'OutTan', 'outtangent')
+                    self.replace(input_, 'source', 'interp', 'interpolation')
+            channel = anim.find('channel')
+            if channel is not None:
+                self.replace(channel, 'source', to_replace, with_this)
+
+    def add_library_animation_clips(self):
+        lib_anims = self.root.find('library_animations')
+        if lib_anims is not None:
+            lib_clips = SubElement(self.root, 'library_animation_clips')
+            clip = SubElement(lib_clips, 'animation_clip')
+            clip.set('id', 'mainanim-{0}'.format(self.scene_name))
+            #clip.set('name', 'main_anim')
+            clip.set('start', '0.033367')
+            clip.set('end', '0.3367')
+            for anim in lib_anims:
+                inst_anim = SubElement(clip, 'instance_animation')
+                inst_anim.set('url', '#{0}'.format(anim.get('id')))
+            clip2 = SubElement(lib_clips, 'animation_clip')
+            clip2.set('id', 'mainanim2-{0}'.format(self.scene_name))
+            #clip.set('name', 'main_anim')
+            clip2.set('start', '0.33367')
+            clip2.set('end', '0.666')
+            for anim in lib_anims:
+                inst_anim = SubElement(clip2, 'instance_animation')
+                inst_anim.set('url', '#{0}'.format(anim.get('id')))
+
     def prepare_for_rc(self):
-        self.temp_path = os.path.join(os.path.dirname(self.path), 'tempfile')
+        self.temp_path = os.path.join(os.path.dirname(self.config['path']), 'tempfile')
         with open(self.temp_path, 'w') as fh:
             fh.writelines(self.get_adjusted())
         self.tree = ElementTree(file=self.temp_path)
@@ -163,10 +319,18 @@ class ColladaEditor(object):
 
         self.prepare_library_geometries()
 
+        self.prepare_library_animations()
+
+        self.prepare_library_controllers()
+
         self.prepare_visual_scenes()
+
+        #self.indent(self.root)
+
+        self.add_library_animation_clips()
 
         self.tree = ElementTree(element=self.root)
 
-        self.tree.write(self.path)
+        self.tree.write(self.config['path'])
 
         os.remove(self.temp_path)

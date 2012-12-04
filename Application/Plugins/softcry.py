@@ -60,8 +60,11 @@ def SoftCryExport_Execute():
             xsi.DeleteObj('SoftCryExport')
     pS = xsi.ActiveSceneRoot.AddProperty('CustomProperty', False, 'SoftCryExport')
     pS.AddParameter3('path', const.siString, 'E:\\AndeSoft\\Projects\\CE\\File\\softtest.dae')
-    pS.AddParameter3('customnormals', const.siBool, True)
-    pS.AddParameter3('donotmerge', const.siBool, True)
+    pS.AddParameter3('rcpath', const.siString, 'E:\\AndeSoft\\CE_343\\bin32\\rc\\')
+    pS.AddParameter3('customnormals', const.siBool, True, '', 0, 0)
+    pS.AddParameter3('donotmerge', const.siBool, True, '', 0, 0)
+    pS.AddParameter3('filetype', const.siString, 'cgf', '', 0, 0)
+    file_types = ('CGF', 'cgf', 'CGA', 'cgaanm', 'CHRCAF', 'chrcaf')
 
     mLay = pS.PPGLayout
     mLay.SetAttribute(const.siUILogicFile, ADDONPATH + '\\SoftCry\\Application\\Logic\\exporter.py')
@@ -71,6 +74,7 @@ def SoftCryExport_Execute():
     item = mLay.AddItem
     row = mLay.AddRow
     erow = mLay.EndRow
+    enum = mLay.AddEnumControl
 
     path_ctrl = item('path', 'File', const.siControlFilePath)
     path_ctrl.SetAttribute(const.siUINoLabel, 1)
@@ -78,17 +82,24 @@ def SoftCryExport_Execute():
     path_ctrl.SetAttribute(const.siUIOpenFile, False)
     path_ctrl.SetAttribute(const.siUIFileMustExist, False)
 
+    texPathI = mLay.AddItem('rcpath', 'Resource Compiler', const.siControlFolder)
+    texPathI.SetAttribute(const.siUINoLabel, 1)
+    texPathI.SetAttribute(const.siUIWidthPercentage, 55)
+
     row()
     item('donotmerge', 'Do Not Merge')
     item('customnormals', 'Custom Normals')
     erow()
 
+    row()
+    enum('filetype', file_types, 'File Type', const.siControlCombo)
     btn('Export', 'Export')
+    erow()
 
     desk = xsi.Desktop.ActiveLayout
     view = desk.CreateView('Property Panel', 'SoftCryExport')
     view.BeginEdit()
-    view.Resize(400, 100)
+    view.Resize(400, 150)
     view.SetAttributeValue('targetcontent', pS.FullName)
     view.EndEdit()
     return True
