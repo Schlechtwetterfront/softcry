@@ -1,3 +1,4 @@
+# Code Copyright (C) Ande 2012
 import win32com.client
 from win32com.client import constants as const
 import sys
