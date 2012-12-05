@@ -232,6 +232,8 @@ class ColladaEditor(object):
 
     def prepare_library_animations(self):
         lib_anims = self.root.find('library_animations')
+        if lib_anims is None:
+            return
         for anim in lib_anims:
             to_replace = None
             with_this = None
