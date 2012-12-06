@@ -1,6 +1,15 @@
 from xml.etree.ElementTree import ElementTree, SubElement  # , dump, Element
 import os
 
+import logging as l
+
+'''logpath = os.path.join(os.path.dirname(__file__), 'crydaemon.log')
+l.basicConfig(format='%(levelname)s (%(lineno)d, %(funcName)s): %(message)s',
+                    filename=logpath,
+                    filemode='w',
+                    level=l.DEBUG)'''
+
+
 MATERIAL_PHYS = ('physDefault',  # default collision
                 'physProxyNoDraw',  # default collision but geometry is invisible
                 'physNone',  # no collision
@@ -79,8 +88,10 @@ class ColladaEditor(object):
         node.set(attribute, node.get(attribute).replace(to_replace, with_this))
 
     def prepare_library_geometries(self):
+        l.info('Preparing Library Geometries.')
         lib_geoms = self.root.find('library_geometries')
         for geom in lib_geoms:
+            l.info('Preparing Geometry {0}'.format(geom.get('id')))
             mesh = geom[0]
             sources = mesh.findall('source')
             # Adjust naming conventions for 'sources'.
@@ -130,11 +141,14 @@ class ColladaEditor(object):
                 if tris.find('vcount') is None:
                     vcount = SubElement(tris, 'vcount')
                     vcount.text = ' '.join(['3'] * self.vertex_count)
+            l.info('Finished preparing {0}.'.format(geom.get('id')))
 
     def prepare_visual_scenes(self):
+        l.info('Preparing Visual Scenes.')
         scenes = self.root.find('library_visual_scenes')
         vis_scene = scenes[0]
         root_nodes = list(vis_scene)
+        l.info('Creating CryExport Node.')
         cryexportnode = SubElement(vis_scene, 'node')
         cryexportnode.attrib['id'] = 'CryExportNode_{0}'.format(self.scene_name)
         extra = SubElement(cryexportnode, 'extra')
@@ -147,11 +161,14 @@ class ColladaEditor(object):
         if self.config['customnormals']:
             flags.append('CustomNormals')
         props.text = '\n'.join(flags)
+        l.info('Applied flags "{0}" to CryExport Node.'.format(' '.join(flags)))
         # Remove nodes.
         for node in root_nodes:
             vis_scene.remove(node)
             cryexportnode.append(node)
+        l.info('Reparented nodes.')
         self.recursive_adjust_nodes(cryexportnode)
+        l.info('Finished preparing Visual Scenes.')
 
     def recursive_adjust_nodes(self, rootnode):
         nodes = rootnode.findall('node')
@@ -177,21 +194,27 @@ class ColladaEditor(object):
                     inst_mat.attrib['target'] = '#{0}'.format(newname)
 
     def remove_library_effects(self):
+        l.info('Removing Library Effects.')
         effects = self.root.find('library_effects')
         self.root.remove(effects)
 
     def prepare_library_materials(self):
+        l.info('Preparing Library Materials.')
         lib_materials = self.root.find('library_materials')
         for lib_mat in lib_materials:
             newname = self.materials[lib_mat.attrib['id']]
+            l.info('Setting ID and name from "{0}" to "{1}"'.format(lib_mat.get('id'), newname))
             lib_mat.attrib['id'] = newname
             lib_mat.attrib['name'] = newname
+        l.info('Finished preparing Library Materials.')
 
     def prepare_library_controllers(self):
+        l.info('Preparing Library Controllers.')
         lib_controllers = self.root.find('library_controllers')
         if lib_controllers is None:
             return
         for controller in lib_controllers:
+            l.info('Preparing Controller "{0}".'.format(controller.get('id')))
             for skin in controller:
                 geo_name = skin.get('source')[1:]
                 cname = controller.get('id')
@@ -229,8 +252,10 @@ class ColladaEditor(object):
                             self.replace(input_, 'source', 'Joints', 'joints')
                         elif 'Weights' in input_.get('source'):
                             self.replace(input_, 'source', 'Weights', 'weights')
+        l.info('Finished preparing controllers.')
 
     def prepare_library_animations(self):
+        l.info('Preparing Library Animations.')
         lib_anims = self.root.find('library_animations')
         if lib_anims is None:
             return
@@ -286,8 +311,10 @@ class ColladaEditor(object):
             channel = anim.find('channel')
             if channel is not None:
                 self.replace(channel, 'source', to_replace, with_this)
+        l.info('Finished preparing Library Animations.')
 
     def add_library_animation_clips(self):
+        l.info('Adding Library Animation Clips.')
         lib_anims = self.root.find('library_animations')
         if lib_anims is not None:
             lib_clips = SubElement(self.root, 'library_animation_clips')
@@ -307,6 +334,7 @@ class ColladaEditor(object):
             for anim in lib_anims:
                 inst_anim = SubElement(clip2, 'instance_animation')
                 inst_anim.set('url', '#{0}'.format(anim.get('id')))
+        l.info('Finished adding Clips.')
 
     def prepare_for_rc(self):
         self.temp_path = os.path.join(os.path.dirname(self.config['path']), 'tempfile')

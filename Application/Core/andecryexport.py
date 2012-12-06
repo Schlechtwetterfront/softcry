@@ -6,11 +6,18 @@ from win32com.client import constants as const
 import subprocess
 import os
 
+import logging
+
 
 class Export(andesicore.SIGeneral):
     def __init__(self, xsi, config):
         self.xsi = xsi
         self.config = config
+        logpath = os.path.join(self.xsi.InstallationPath(const.siUserAddonPath), 'SoftCry', 'export.log')
+        logging.basicConfig(format='%(levelname)s (%(lineno)d, %(funcName)s): %(message)s',
+                            filename=logpath,
+                            filemode='w',
+                            level=logging.DEBUG)
 
     def create_options(self):
         for prop in self.xsi.ActiveSceneRoot.Properties:
@@ -50,15 +57,19 @@ class Export(andesicore.SIGeneral):
         options.AddParameter3('Models', const.siString, 0)  # should be ok like this.
         options.AddParameter3('MatLib_ExportUsedImageClipsOnly', const.siBool, False)  # maybe change it later.
         # grid data: options.AddParameter3('ActionSourceExportTable', const.siBool, False)
+        logging.info('Created Crosswalk export options,')
         return options
 
     def export(self):
+        logging.info('Starting export,')
         self.selection = self.xsi.Selection(0)
         if not self.selection:
+            logging.error('No selection')
             raise SystemExit
         # self.hierarchy = self.get_all_children(self.selection)
         lib = self.xsi.ActiveProject.ActiveScene.ActiveMaterialLibrary
         self.materials = []
+        logging.info('Getting materials with physicalization.')
         for ind, mat in enumerate(lib.Items):
             phys = 'physDefault'
             for prop in mat.Properties:
@@ -67,12 +78,19 @@ class Export(andesicore.SIGeneral):
             cm = crydaemon.CryMaterial(mat.Name, ind, phys)
             self.materials.append(cm)
         self.do_export()
+        logging.info('Finished export.')
+        logging.shutdown()
 
     def do_export(self):
         self.create_options()
+        logging.info('Starting Crosswalk COLLADA export.')
         self.xsi.ExportCrosswalk('SCCrosswalkOptions')
+        logging.info('Finished Crosswalk COLLADA export.')
+        logging.info('Starting .DAE preparation.')
         ed = crydaemon.ColladaEditor(self.config, self.materials)
         ed.prepare_for_rc()
+        logging.info('Finished .DAE preparation.')
         exepath = os.path.join(self.config['rcpath'], 'rc.exe')
+        logging.info('Calling Resource Compiler with "{0}{1}"'.format(exepath, self.config['path']))
         p = subprocess.Popen((exepath, '{0}'.format(self.config['path'])), stdout=subprocess.PIPE)
-        print p.communicate()[0]
+        logging.info(p.communicate()[0])
