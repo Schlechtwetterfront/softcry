@@ -92,5 +92,5 @@ class Export(andesicore.SIGeneral):
         logging.info('Finished .DAE preparation.')
         exepath = os.path.join(self.config['rcpath'], 'rc.exe')
         logging.info('Calling Resource Compiler with "{0}{1}"'.format(exepath, self.config['path']))
-        p = subprocess.Popen((exepath, '{0}'.format(self.config['path'])), stdout=subprocess.PIPE)
+        p = subprocess.Popen((exepath, '{0}'.format(self.config['path']), '/createmtl=1'), stdout=subprocess.PIPE)
         logging.info(p.communicate()[0])

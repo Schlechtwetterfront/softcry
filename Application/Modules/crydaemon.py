@@ -1,4 +1,4 @@
-from xml.etree.ElementTree import ElementTree, SubElement  # , dump, Element
+from xml.etree.ElementTree import ElementTree, SubElement, dump  # , Element
 import os
 
 import logging as l
@@ -25,8 +25,8 @@ class CryMaterial(object):
 
     def get_adjusted_name(self, scenename=None):
         if scenename:
-            return '{0}__{1}__sub{2}__{3}'.format(scenename, self.index + 1,
-                                                self.index + 1, self.phys)
+            return '{0}__{1}__{2}__{3}'.format(scenename, self.index + 1,
+                                                self.name, self.phys)
         else:
             return '{0}__sub{1}__{2}'.format(self.index + 1, self.index + 1, self.phys)
 
@@ -336,6 +336,66 @@ class ColladaEditor(object):
                 inst_anim.set('url', '#{0}'.format(anim.get('id')))
         l.info('Finished adding Clips.')
 
+    def prepare_library_images(self):
+        lib_images = self.root.find('library_images')
+        if lib_images is None:
+            return
+        for image in lib_images:
+            attribs = ('depth', 'format', 'height', 'width')
+            for el in attribs:
+                del image.attrib[el]
+            path = image[0].text
+            image[0].text = os.path.abspath(path)
+
+    def prepare_library_effects(self):
+        lib_effects = self.root.find('library_effects')
+        if lib_effects is None:
+            return
+        for effect in lib_effects:
+            name = effect.get('id')[:-3]
+            self.replace_id(effect, name, self.materials[name])
+            self.replace(effect, 'name', name, self.materials[name])
+            profile = effect.find('profile_COMMON')
+            params = profile.findall('newparam')
+            for param in params:
+                if '_surface' in param.get('sid'):
+                    print dump(param)
+                    self.replace(param, 'sid', '_surface', '-surface')
+                    #surface = param.get('surface')
+                    #init = surface.get('init_from')
+                    # what now?
+                elif '_sampler' in param.get('sid'):
+                    self.replace(param, 'sid', '_sampler', '-sampler')
+                    sampler = param[0]  # param.get('sampler2D')
+                    print dump(sampler)
+                    source = sampler[0]  # sampler.get('source')
+                    source.text = source.text.replace('_surface', '-surface')
+            tech = profile.find('technique')
+            #tech.set('sid', 'common')
+            phong = tech.find('phong')
+            diff = phong.find('diffuse')
+            if diff is not None:
+                tex = diff.find('texture')
+                if tex is not None:
+                    del tex.attrib['texcoord']
+                    self.replace(tex, 'texture', '_sampler', '-sampler')
+            spec = phong.find('specular')
+            if spec is not None:
+                tex = spec.find('texture')
+                if tex is not None:
+                    del tex.attrib['texcoord']
+                    self.replace(tex, 'texture', '_sampler', '-sampler')
+
+    def adjust_asset(self):
+        asset = self.root.find('asset')
+        tool = asset.find('contributor').find('authoring_tool')
+        tool.text = 'Softimage Crosswalk exporter featuring SoftCry exporter by Ande'
+        unit = asset.find('unit')
+        unit.set('meter', '1')
+        unit.set('name', 'meter')
+        up_axis = asset.find('up_axis')
+        up_axis.text = 'Y_UP'
+
     def prepare_for_rc(self):
         self.temp_path = os.path.join(os.path.dirname(self.config['path']), 'tempfile')
         with open(self.temp_path, 'w') as fh:
@@ -344,6 +404,12 @@ class ColladaEditor(object):
         self.root = self.tree.getroot()
 
         # self.remove_library_effects()
+
+        self.adjust_asset()
+
+        self.prepare_library_images()
+
+        # self.prepare_library_effects()
 
         self.prepare_library_materials()
 
