@@ -1,4 +1,4 @@
-from xml.etree.ElementTree import ElementTree, SubElement, dump  # , Element
+from xml.etree.ElementTree import ElementTree, SubElement  # , dump  # , Element
 import os
 
 import logging as l
@@ -17,11 +17,29 @@ MATERIAL_PHYS = ('physDefault',  # default collision
                 'physNoCollide')  # will collide with bullets
 
 
+class CryClip(object):
+    def __init__(self, name, start, end):
+        self.name = name
+        self.start = start
+        self.end = end
+
+    def adjust_name(self, scenename):
+        self.name = '{0}-{1}'.format(self.name, scenename)
+
+    def adjust_time(self):
+        self.start = self.start / 30.0
+        self.end = self.end / 30.0
+
+
 class CryMaterial(object):
-    def __init__(self, name, index, phys):
+    def __init__(self, name, index, normalmap, phys):
         self.name = name
         self.index = index
         self.phys = phys
+        self.normal_map = normalmap
+
+    def get_normal_map_name(self):
+        return os.path.basename(self.normal_map).replace('.', '_')
 
     def get_adjusted_name(self, scenename=None):
         if scenename:
@@ -32,13 +50,14 @@ class CryMaterial(object):
 
 
 class ColladaEditor(object):
-    def __init__(self, config, materials):
+    def __init__(self, config, materials=None, clips=None):
         self.config = config
         self.tree = None
         self.vertex_count = 0
         self.scene_name = os.path.basename(self.config['path'])[:-4]
-        self.materials = self.adjust_materials(materials)
+        self.material_names, self.materials = self.adjust_materials(materials)
         self.controllers = {}
+        self.clips = self.adjust_clips(clips)
 
     def indent(self, elem, level=0):
         i = '\n' + level * '\t'
@@ -55,11 +74,21 @@ class ColladaEditor(object):
             if level and (not elem.tail or not elem.tail.strip()):
                 elem.tail = i
 
+    def adjust_clips(self, clips):
+        if not clips:
+            return ()
+        for clip in clips:
+            clip.adjust_name(self.scene_name)
+            clip.adjust_time()
+        return clips
+
     def adjust_materials(self, materials):
         dc = {}
+        names = {}
         for mat in materials:
-            dc[mat.name] = mat.get_adjusted_name(self.scene_name)
-        return dc
+            names[mat.name] = mat.get_adjusted_name(self.scene_name)
+            dc[mat.name] = mat
+        return names, dc
 
     def get_adjusted(self):
         with open(self.config['path'], 'r') as fh:
@@ -90,6 +119,9 @@ class ColladaEditor(object):
     def prepare_library_geometries(self):
         l.info('Preparing Library Geometries.')
         lib_geoms = self.root.find('library_geometries')
+        if lib_geoms is None:
+            l.error('No geometries.')
+            return
         for geom in lib_geoms:
             l.info('Preparing Geometry {0}'.format(geom.get('id')))
             mesh = geom[0]
@@ -129,7 +161,7 @@ class ColladaEditor(object):
             # Adjust material name.
             triangles = mesh.findall('triangles')
             for tris in triangles:
-                tris.attrib['material'] = self.materials[tris.attrib['material']]
+                tris.attrib['material'] = self.material_names[tris.attrib['material']]
                 inputs = tris.findall('input')
                 for input_ in inputs:
                     if input_.attrib['semantic'] == 'VERTEX':
@@ -146,6 +178,9 @@ class ColladaEditor(object):
     def prepare_visual_scenes(self):
         l.info('Preparing Visual Scenes.')
         scenes = self.root.find('library_visual_scenes')
+        if scenes is None:
+            l.error('No scenes.')
+            return
         vis_scene = scenes[0]
         root_nodes = list(vis_scene)
         l.info('Creating CryExport Node.')
@@ -175,6 +210,18 @@ class ColladaEditor(object):
         for node in nodes:
             self.recursive_adjust_nodes(node)
         self.adjust_instance_materials(rootnode)
+        extra = SubElement(rootnode, 'extra')
+        tech = SubElement(extra, 'technique')
+        tech.set('profile', 'CryEngine')
+        props = SubElement(tech, 'properties')
+        props.text = ''
+        if rootnode.get('type') == 'JOINT':
+            helper = SubElement(tech, 'helper')
+            helper.set('type', 'dummy')
+            bb_max = SubElement(helper, 'bound_box_max')
+            bb_max.text = '0.5 0.5 0.5'
+            bb_min = SubElement(helper, 'bound_box_min')
+            bb_min.text = '-0.5 -0.5 -0.5'
 
     def adjust_instance_materials(self, node):
         inst = node.find('instance_geometry')
@@ -189,20 +236,18 @@ class ColladaEditor(object):
             tech = bind_mat.find('technique_common')
             if tech is not None:
                 for inst_mat in tech:
-                    newname = self.materials[inst_mat.attrib['symbol']]
+                    newname = self.material_names[inst_mat.attrib['symbol']]
                     inst_mat.attrib['symbol'] = newname
                     inst_mat.attrib['target'] = '#{0}'.format(newname)
-
-    def remove_library_effects(self):
-        l.info('Removing Library Effects.')
-        effects = self.root.find('library_effects')
-        self.root.remove(effects)
 
     def prepare_library_materials(self):
         l.info('Preparing Library Materials.')
         lib_materials = self.root.find('library_materials')
+        if lib_materials is None:
+            l.error('No materials.')
+            return
         for lib_mat in lib_materials:
-            newname = self.materials[lib_mat.attrib['id']]
+            newname = self.material_names[lib_mat.attrib['id']]
             l.info('Setting ID and name from "{0}" to "{1}"'.format(lib_mat.get('id'), newname))
             lib_mat.attrib['id'] = newname
             lib_mat.attrib['name'] = newname
@@ -212,56 +257,76 @@ class ColladaEditor(object):
         l.info('Preparing Library Controllers.')
         lib_controllers = self.root.find('library_controllers')
         if lib_controllers is None:
+            l.info('No controllers.')
             return
         for controller in lib_controllers:
             l.info('Preparing Controller "{0}".'.format(controller.get('id')))
             for skin in controller:
                 geo_name = skin.get('source')[1:]
                 cname = controller.get('id')
-                controller.set('id', '{0}_{1}'.format(cname, geo_name))
+                newname = '{0}_{1}'.format(cname, geo_name)
+                controller.set('id', newname)
                 self.controllers[cname] = controller.get('id')
                 sources = skin.findall('source')
                 for source in sources:
                     if 'Joints' in source.get('id'):
-                        self.replace_id(source, 'Joints', 'joints')
+                        #self.replace_id(source, '-Joints', 'joints')
+                        source.set('id', '{0}_joints'.format(newname))
                         idref = source.find('IDREF_array')
                         if idref is not None:
-                            idref.set('id', idref.get('id').replace('Joints', 'joints'))
+                            idref.set('id', '{0}_joints_array'.format(newname))
                         tech = source.find('technique_common')
-                        self.replace_technique_source(tech, 'Joints', 'joints')
+                        #self.replace_technique_source(tech, '-Joints-array', '_joints_array')
+                        acc = tech.find('accessor')
+                        acc.set('source', '#{0}_joints_array'.format(newname))
                     elif 'Matrices' in source.get('id'):
-                        self.replace_id(source, 'Matrices', 'matrices')
-                        self.replace_id(source.find('float_array'), 'Matrices', 'matrices')
-                        self.replace_technique_source(source.find('technique_common'), 'Matrices', 'matrices')
+                        #self.replace_id(source, '-Matrices', '_matrices')
+                        #self.replace_id(source.find('float_array'), '-Matrices-array', '_matrices_array')
+                        #self.replace_technique_source(source.find('technique_common'), '-Matrices-array', '_matrices_array')
+                        source.set('id', '{0}_matrices'.format(newname))
+                        source.find('float_array').set('id', '{0}_matrices_array'.format(newname))
+                        tech = source.find('technique_common')
+                        acc = tech.find('accessor')
+                        acc.set('source', '#{0}_matrices_array'.format(newname))
                     elif 'Weights' in source.get('id'):
-                        self.replace_id(source, 'Weights', 'weights')
-                        self.replace_id(source.find('float_array'), 'Weights', 'weights')
-                        self.replace_technique_source(source.find('technique_common'), 'Weights', 'weights')
+                        #self.replace_id(source, '-Weights', '_weights')
+                        #self.replace_id(source.find('float_array'), '-Weights-array', '_weights_array')
+                        #self.replace_technique_source(source.find('technique_common'), '-Weights-array', '_weights_array')
+                        source.set('id', '{0}_weights'.format(newname))
+                        source.find('float_array').set('id', '{0}_weights_array'.format(newname))
+                        tech = source.find('technique_common')
+                        acc = tech.find('accessor')
+                        acc.set('source', '#{0}_weights_array'.format(newname))
                 joints = skin.find('joints')
                 if joints is not None:
                     for input_ in joints:
                         if 'Joints' in input_.get('source'):
-                            self.replace(input_, 'source', 'Joints', 'joints')
+                            #self.replace(input_, 'source', '-Joints', '_joints')
+                            input_.set('source', '#{0}_joints'.format(newname))
                         elif 'Matrices' in input_.get('source'):
-                            self.replace(input_, 'source', 'Matrices', 'matrices')
+                            #self.replace(input_, 'source', '-Matrices', '_matrices')
+                            input_.set('source', '#{0}_matrices'.format(newname))
                 v_weights = skin.find('vertex_weights')
                 if v_weights is not None:
                     inputs = v_weights.findall('input')
                     for input_ in inputs:
                         if 'Joints' in input_.get('source'):
-                            self.replace(input_, 'source', 'Joints', 'joints')
+                            #self.replace(input_, 'source', '-Joints', '_joints')
+                            input_.set('source', '#{0}_joints'.format(newname))
                         elif 'Weights' in input_.get('source'):
-                            self.replace(input_, 'source', 'Weights', 'weights')
+                            #self.replace(input_, 'source', '-Weights', '_weights')
+                            input_.set('source', '#{0}_weights'.format(newname))
         l.info('Finished preparing controllers.')
 
     def prepare_library_animations(self):
         l.info('Preparing Library Animations.')
         lib_anims = self.root.find('library_animations')
         if lib_anims is None:
+            l.info('No animations.')
             return
         for anim in lib_anims:
-            to_replace = None
-            with_this = None
+            to_replace = ''
+            with_this = ''
             if 'translation_X' in anim.get('id'):
                 to_replace = 'translation_X-anim'
                 with_this = 'location_X'
@@ -316,29 +381,23 @@ class ColladaEditor(object):
     def add_library_animation_clips(self):
         l.info('Adding Library Animation Clips.')
         lib_anims = self.root.find('library_animations')
-        if lib_anims is not None:
+        if (lib_anims is not None) and self.clips:
             lib_clips = SubElement(self.root, 'library_animation_clips')
-            clip = SubElement(lib_clips, 'animation_clip')
-            clip.set('id', 'mainanim-{0}'.format(self.scene_name))
-            #clip.set('name', 'main_anim')
-            clip.set('start', '0.033367')
-            clip.set('end', '0.3367')
-            for anim in lib_anims:
-                inst_anim = SubElement(clip, 'instance_animation')
-                inst_anim.set('url', '#{0}'.format(anim.get('id')))
-            clip2 = SubElement(lib_clips, 'animation_clip')
-            clip2.set('id', 'mainanim2-{0}'.format(self.scene_name))
-            #clip.set('name', 'main_anim')
-            clip2.set('start', '0.33367')
-            clip2.set('end', '0.666')
-            for anim in lib_anims:
-                inst_anim = SubElement(clip2, 'instance_animation')
-                inst_anim.set('url', '#{0}'.format(anim.get('id')))
-        l.info('Finished adding Clips.')
+            for clip in self.clips:
+                clip_node = SubElement(lib_clips, 'animation_clip')
+                clip_node.set('start', str(clip.start))
+                clip_node.set('end', str(clip.end))
+                clip_node.set('id', clip.name)
+                for anim in lib_anims:
+                    inst_anim = SubElement(clip_node, 'instance_animation')
+                    inst_anim.set('url', '#{0}'.format(anim.get('id')))
+        l.info('Added {0} clips.'.format(len(self.clips)))
 
     def prepare_library_images(self):
+        l.info('Preparing Library Images.')
         lib_images = self.root.find('library_images')
         if lib_images is None:
+            l.info('No images.')
             return
         for image in lib_images:
             attribs = ('depth', 'format', 'height', 'width')
@@ -346,47 +405,41 @@ class ColladaEditor(object):
                 del image.attrib[el]
             path = image[0].text
             image[0].text = os.path.abspath(path)
+        l.info('Finished preparing Library Images.')
 
     def prepare_library_effects(self):
+        l.info('Preparing Library Effects.')
         lib_effects = self.root.find('library_effects')
         if lib_effects is None:
             return
         for effect in lib_effects:
-            name = effect.get('id')[:-3]
-            self.replace_id(effect, name, self.materials[name])
-            self.replace(effect, 'name', name, self.materials[name])
+            material_name = effect.get('id')[:-3]
+            print material_name
             profile = effect.find('profile_COMMON')
-            params = profile.findall('newparam')
-            for param in params:
-                if '_surface' in param.get('sid'):
-                    print dump(param)
-                    self.replace(param, 'sid', '_surface', '-surface')
-                    #surface = param.get('surface')
-                    #init = surface.get('init_from')
-                    # what now?
-                elif '_sampler' in param.get('sid'):
-                    self.replace(param, 'sid', '_sampler', '-sampler')
-                    sampler = param[0]  # param.get('sampler2D')
-                    print dump(sampler)
-                    source = sampler[0]  # sampler.get('source')
-                    source.text = source.text.replace('_surface', '-surface')
-            tech = profile.find('technique')
-            #tech.set('sid', 'common')
-            phong = tech.find('phong')
-            diff = phong.find('diffuse')
-            if diff is not None:
-                tex = diff.find('texture')
-                if tex is not None:
-                    del tex.attrib['texcoord']
-                    self.replace(tex, 'texture', '_sampler', '-sampler')
-            spec = phong.find('specular')
-            if spec is not None:
-                tex = spec.find('texture')
-                if tex is not None:
-                    del tex.attrib['texcoord']
-                    self.replace(tex, 'texture', '_sampler', '-sampler')
+            mat = self.materials[material_name]
+            if mat and mat.normal_map:
+                normal_param = SubElement(profile, 'newparam')
+                normal_param.set('sid', '{0}_surface'.format(mat.get_normal_map_name()))
+                surf = SubElement(normal_param, 'surface')
+                surf.set('type', '2D')
+                init = SubElement(surf, 'init_from')
+                init.text = '{0}_img'.format(mat.get_normal_map_name())
+
+                sampler_param = SubElement(profile, 'newparam')
+                sampler_param.set('sid', '{0}_sampler'.format(mat.get_normal_map_name()))
+                sampler = SubElement(sampler_param, 'sampler2D')
+                source = SubElement(sampler, 'source')
+                source.text = '{0}_surface'.format(mat.get_normal_map_name())
+
+                tech = profile.find('technique')
+                phong = tech.find('phong')
+                normal = SubElement(phong, 'normal')
+                tex = SubElement(normal, 'texture')
+                tex.set('texture', '{0}_sampler'.format(mat.get_normal_map_name()))
+        l.info('Finished preparing Library Effects.')
 
     def adjust_asset(self):
+        l.info('Adjusting asset.')
         asset = self.root.find('asset')
         tool = asset.find('contributor').find('authoring_tool')
         tool.text = 'Softimage Crosswalk exporter featuring SoftCry exporter by Ande'
@@ -395,6 +448,7 @@ class ColladaEditor(object):
         unit.set('name', 'meter')
         up_axis = asset.find('up_axis')
         up_axis.text = 'Y_UP'
+        l.info('Adjusted asset.')
 
     def prepare_for_rc(self):
         self.temp_path = os.path.join(os.path.dirname(self.config['path']), 'tempfile')
@@ -409,7 +463,7 @@ class ColladaEditor(object):
 
         self.prepare_library_images()
 
-        # self.prepare_library_effects()
+        self.prepare_library_effects()
 
         self.prepare_library_materials()
 

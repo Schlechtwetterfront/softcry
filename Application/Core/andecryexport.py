@@ -5,6 +5,8 @@ reload(andesicore)
 from win32com.client import constants as const
 import subprocess
 import os
+from datetime import datetime
+now = datetime.now
 
 import logging
 
@@ -60,26 +62,76 @@ class Export(andesicore.SIGeneral):
         logging.info('Created Crosswalk export options,')
         return options
 
+    def get_clip_prop(self):
+        for prop in self.xsi.ActiveSceneRoot.Properties:
+            if 'SoftCryAnimationClips' in prop.Name:
+                return prop
+
+    def get_anim_clips(self):
+        clip_prop = self.get_clip_prop()
+        if not clip_prop:
+            return
+        names = clip_prop.Parameters('names').Value
+        starts = clip_prop.Parameters('starts').Value
+        ends = clip_prop.Parameters('ends').Value
+
+        if not names:
+            return ()
+
+        names = names.split('::')
+        starts = starts.split('::')
+        ends = ends.split('::')
+
+        clips = []
+        for index, name in enumerate(names):
+            clips.append(crydaemon.CryClip(name, int(starts[index]), int(ends[index])))
+        return clips
+
+    def get_normal_map(self, mat):
+        shader = mat.Shaders(0)
+        col2vec_out = shader.Parameters('bump').Source
+        if not col2vec_out:
+            return None
+        col2vec = col2vec_out.Parent
+        img_out = col2vec.input.Source
+        if not img_out:
+            return None
+        img = img_out.Parent
+        return img.ImageClips(0).Source.Parameters('FileName').Value
+
     def export(self):
-        logging.info('Starting export,')
+        logging.info('Starting export at {0}.'.format(str(now())))
         self.selection = self.xsi.Selection(0)
         if not self.selection:
             logging.error('No selection')
+            self.msg('No selection.', plugin='SoftCry')
             raise SystemExit
-        # self.hierarchy = self.get_all_children(self.selection)
+        self.hierarchy = self.get_all_children(self.selection)
+        if not self.hierarchy:
+            logging.error('No valid selection')
+            self.msg('No selection.', plugin='SoftCry')
+            raise SystemExit
         lib = self.xsi.ActiveProject.ActiveScene.ActiveMaterialLibrary
         self.materials = []
-        logging.info('Getting materials with physicalization.')
+        logging.info('Retrieving materials.')
         for ind, mat in enumerate(lib.Items):
             phys = 'physDefault'
+            normal = ''  # self.get_normal_map(mat)
             for prop in mat.Properties:
                 if 'SoftCryProp' in prop.Name:
                     phys = prop.Parameters('phys').Value
-            cm = crydaemon.CryMaterial(mat.Name, ind, phys)
+            cm = crydaemon.CryMaterial(mat.Name, ind, normal, phys)
             self.materials.append(cm)
+        logging.info('Retrieved {0} materials.'.format(len(self.materials)))
+        logging.info('Retrieving animation clips.')
+        self.clips = self.get_anim_clips()
+        if self.clips:
+            logging.info('Retrieved {0} clips.'.format(len(self.clips)))
+        else:
+            logging.info('Retrieved no clips.')
         self.do_export()
         logging.info('Finished export.')
-        logging.shutdown()
+        #logging.shutdown()
 
     def do_export(self):
         self.create_options()
@@ -87,10 +139,10 @@ class Export(andesicore.SIGeneral):
         self.xsi.ExportCrosswalk('SCCrosswalkOptions')
         logging.info('Finished Crosswalk COLLADA export.')
         logging.info('Starting .DAE preparation.')
-        ed = crydaemon.ColladaEditor(self.config, self.materials)
+        ed = crydaemon.ColladaEditor(self.config, self.materials, self.clips)
         ed.prepare_for_rc()
         logging.info('Finished .DAE preparation.')
         exepath = os.path.join(self.config['rcpath'], 'rc.exe')
-        logging.info('Calling Resource Compiler with "{0}{1}"'.format(exepath, self.config['path']))
+        logging.info('Calling Resource Compiler with "{0} {1} {2}"'.format(exepath, self.config['path'], '/createmtl=1'))
         p = subprocess.Popen((exepath, '{0}'.format(self.config['path']), '/createmtl=1'), stdout=subprocess.PIPE)
         logging.info(p.communicate()[0])

@@ -1,5 +1,7 @@
 import andecryexport
 reload(andecryexport)
+import crycore
+reload(crycore)
 xsi = Application
 
 
@@ -11,7 +13,7 @@ def Export_OnClicked():
     config['customnormals'] = params('customnormals').Value
     config['donotmerge'] = params('donotmerge').Value
     config['filetype'] = params('filetype').Value
-    print config['filetype']
+    crycore.save_settings(xsi, config)
     export = andecryexport.Export(xsi, config)
     try:
         export.export()

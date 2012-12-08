@@ -58,15 +58,19 @@ def SoftCryExport_Init(in_ctxt):
 
 
 def SoftCryExport_Execute():
+    import crycore
+    reload(crycore)
+    config = crycore.load_settings(xsi)
+
     for prop in xsi.ActiveSceneRoot.Properties:
         if prop.Name == 'SoftCryExport':
             xsi.DeleteObj('SoftCryExport')
     pS = xsi.ActiveSceneRoot.AddProperty('CustomProperty', False, 'SoftCryExport')
-    pS.AddParameter3('path', const.siString, 'E:\\AndeSoft\\Projects\\CE\\File\\softtest.dae')
-    pS.AddParameter3('rcpath', const.siString, 'E:\\AndeSoft\\CE_343\\bin32\\rc\\')
-    pS.AddParameter3('customnormals', const.siBool, True, '', 0, 0)
-    pS.AddParameter3('donotmerge', const.siBool, True, '', 0, 0)
-    pS.AddParameter3('filetype', const.siString, 'cgf', '', 0, 0)
+    pS.AddParameter3('path', const.siString, config['path'])
+    pS.AddParameter3('rcpath', const.siString, config['rcpath'])
+    pS.AddParameter3('customnormals', const.siBool, config['customnormals'], '', 0, 0)
+    pS.AddParameter3('donotmerge', const.siBool, config['donotmerge'], '', 0, 0)
+    pS.AddParameter3('filetype', const.siString, config['filetype'], '', 0, 0)
     file_types = ('CGF', 'cgf', 'CGA', 'cgaanm', 'CHRCAF', 'chrcaf')
 
     mLay = pS.PPGLayout
@@ -225,7 +229,7 @@ def SoftCryEditAnimClips_Execute():
     eg()
 
     desk = xsi.Desktop.ActiveLayout
-    view = desk.CreateView('Property Panel', 'SoftCryExport')
+    view = desk.CreateView('Property Panel', 'SoftCryAnimClipEditor')
     view.BeginEdit()
     view.Resize(300, 290)
     view.SetAttributeValue('targetcontent', pS.FullName)
