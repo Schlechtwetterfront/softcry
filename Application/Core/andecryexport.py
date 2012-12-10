@@ -99,18 +99,7 @@ class Export(andesicore.SIGeneral):
         img = img_out.Parent
         return img.ImageClips(0).Source.Parameters('FileName').Value
 
-    def export(self):
-        logging.info('Starting export at {0}.'.format(str(now())))
-        self.selection = self.xsi.Selection(0)
-        if not self.selection:
-            logging.error('No selection')
-            self.msg('No selection.', plugin='SoftCry')
-            raise SystemExit
-        self.hierarchy = self.get_all_children(self.selection)
-        if not self.hierarchy:
-            logging.error('No valid selection')
-            self.msg('No selection.', plugin='SoftCry')
-            raise SystemExit
+    def retrieve_materials(self):
         lib = self.xsi.ActiveProject.ActiveScene.ActiveMaterialLibrary
         self.materials = []
         logging.info('Retrieving materials.')
@@ -123,26 +112,78 @@ class Export(andesicore.SIGeneral):
             cm = crydaemon.CryMaterial(mat.Name, ind, normal, phys)
             self.materials.append(cm)
         logging.info('Retrieved {0} materials.'.format(len(self.materials)))
+
+    def retrieve_clips(self):
         logging.info('Retrieving animation clips.')
         self.clips = self.get_anim_clips()
         if self.clips:
             logging.info('Retrieved {0} clips.'.format(len(self.clips)))
         else:
             logging.info('Retrieved no clips.')
+
+    def export(self):
+        logging.info('Starting export at {0}.'.format(str(now())))
+        if self.config['batch']:
+            self.selection = self.xsi.Selection(0)
+            roots = self.selection.Children
+            for root in roots:
+                to_select = self.get_all_children(root)
+                self.xsi.Selection.Clear()
+                for obj in to_select:
+                    self.xsi.Selection.Add(obj)
+                self.retrieve_materials()
+                self.retrieve_clips()
+                newpath = self.config['path'].split('\\')
+                newpath[-1] = '{0}.dae'.format(root.Name)
+                self.do_export('\\'.join(newpath))
+            self.xsi.Selection.Clear()
+            self.xsi.Selection.Add(self.selection)
+            logging.info('Finished export.')
+            return
+        self.selection = self.xsi.Selection(0)
+        if not self.selection:
+            logging.error('No selection')
+            self.msg('No selection.', plugin='SoftCry')
+            raise SystemExit
+        self.hierarchy = self.get_all_children(self.selection)
+        if not self.hierarchy:
+            logging.error('No valid selection')
+            self.msg('No selection.', plugin='SoftCry')
+            raise SystemExit
+        self.retrieve_materials()
+        self.retrieve_clips()
         self.do_export()
         logging.info('Finished export.')
         #logging.shutdown()
 
-    def do_export(self):
+    def do_export(self, path=None):
         self.create_options()
         logging.info('Starting Crosswalk COLLADA export.')
         self.xsi.ExportCrosswalk('SCCrosswalkOptions')
         logging.info('Finished Crosswalk COLLADA export.')
         logging.info('Starting .DAE preparation.')
+        self.config['scenename'] = os.path.basename(path or self.config['path'])[:-4]
         ed = crydaemon.ColladaEditor(self.config, self.materials, self.clips)
         ed.prepare_for_rc()
         logging.info('Finished .DAE preparation.')
         exepath = os.path.join(self.config['rcpath'], 'rc.exe')
-        logging.info('Calling Resource Compiler with "{0} {1} {2}"'.format(exepath, self.config['path'], '/createmtl=1'))
-        p = subprocess.Popen((exepath, '{0}'.format(self.config['path']), '/createmtl=1'), stdout=subprocess.PIPE)
+        if self.config['onlymaterials']:
+            logging.info('Calling Resource Compiler with "{0} {1} {2}"'.format(exepath, self.config['path'], '/createmtl=1'))
+            p = subprocess.Popen((exepath, '{0}'.format(self.config['path']), '/createmtl=1'), stdout=subprocess.PIPE)
+        else:
+            logging.info('Calling Resource Compiler with "{0} {1}"'.format(exepath, self.config['path']))
+            p = subprocess.Popen((exepath, '{0}'.format(self.config['path'])), stdout=subprocess.PIPE)
         logging.info(p.communicate()[0])
+        if self.config['onlymaterials']:
+            orig_path = path or self.config['path']
+            orig_path = orig_path.split('\\')
+            lib_path = orig_path[:-1]
+            lib_path.append('library.mtl')
+            lib_path = '\\'.join(lib_path)
+            new_path = orig_path[:-1]
+            new_path.append(orig_path[-1].replace('dae', 'mtl'))
+            new_path = '\\'.join(new_path)
+            if os.path.isfile(lib_path):
+                if os.path.isfile(new_path):
+                    os.remove(new_path)
+                os.rename(lib_path, new_path)

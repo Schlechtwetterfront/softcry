@@ -65,13 +65,24 @@ def SoftCryExport_Execute():
     for prop in xsi.ActiveSceneRoot.Properties:
         if prop.Name == 'SoftCryExport':
             xsi.DeleteObj('SoftCryExport')
-    pS = xsi.ActiveSceneRoot.AddProperty('CustomProperty', False, 'SoftCryExport')
-    pS.AddParameter3('path', const.siString, config['path'])
-    pS.AddParameter3('rcpath', const.siString, config['rcpath'])
-    pS.AddParameter3('customnormals', const.siBool, config['customnormals'], '', 0, 0)
-    pS.AddParameter3('donotmerge', const.siBool, config['donotmerge'], '', 0, 0)
-    pS.AddParameter3('filetype', const.siString, config['filetype'], '', 0, 0)
-    file_types = ('CGF', 'cgf', 'CGA', 'cgaanm', 'CHRCAF', 'chrcaf')
+    try:
+        pS = xsi.ActiveSceneRoot.AddProperty('CustomProperty', False, 'SoftCryExport')
+        pS.AddParameter3('path', const.siString, config['path'])
+        pS.AddParameter3('rcpath', const.siString, config['rcpath'])
+        pS.AddParameter3('customnormals', const.siBool, config['customnormals'], '', 0, 0)
+        pS.AddParameter3('donotmerge', const.siBool, config['donotmerge'], '', 0, 0)
+        pS.AddParameter3('filetype', const.siString, config['filetype'], '', 0, 0)
+        file_types = ('CGF', 'cgf', 'CGA', 'cgaanm', 'CHRCAF', 'chrcaf')
+
+        pS.AddParameter3('unit', const.siString, config['unit'], '', 0, 0)
+        units = 'Meter', 'meter', 'Centimeter', 'centimeter'
+
+        pS.AddParameter3('batch', const.siBool, config['batch'], '', 0, 0)
+        pS.AddParameter3('onlymaterials', const.siBool, config['onlymaterials'], '', 0, 0)
+    except KeyError:
+        crycore.default_settings(xsi)
+        xsi.SoftCryExport()
+        return
 
     mLay = pS.PPGLayout
     mLay.SetAttribute(const.siUILogicFile, ADDONPATH + '\\SoftCry\\Application\\Logic\\exporter.py')
@@ -82,6 +93,9 @@ def SoftCryExport_Execute():
     row = mLay.AddRow
     erow = mLay.EndRow
     enum = mLay.AddEnumControl
+    text = mLay.AddStaticText
+    grp = mLay.AddGroup
+    egrp = mLay.EndGroup
 
     path_ctrl = item('path', 'File', const.siControlFilePath)
     path_ctrl.SetAttribute(const.siUINoLabel, 1)
@@ -93,20 +107,34 @@ def SoftCryExport_Execute():
     texPathI.SetAttribute(const.siUINoLabel, 1)
     texPathI.SetAttribute(const.siUIWidthPercentage, 55)
 
+    grp('Export', 1)
+    row()
+    item('batch', 'Batch Export')
+    item('onlymaterials', 'Only Materials')
+    unit = enum('unit', units, 'Unit', const.siControlCombo)
+    unit.SetAttribute('NoLabel', True)
+    erow()
+    egrp()
+
+    grp('In Game', 1)
     row()
     item('donotmerge', 'Do Not Merge')
     item('customnormals', 'Custom Normals')
+    filetype = enum('filetype', file_types, 'File Type', const.siControlCombo)
+    filetype.SetAttribute('NoLabel', True)
     erow()
+    egrp()
 
     row()
-    enum('filetype', file_types, 'File Type', const.siControlCombo)
+    text('')
+    btn('help', 'Help')
     btn('Export', 'Export')
     erow()
 
     desk = xsi.Desktop.ActiveLayout
     view = desk.CreateView('Property Panel', 'SoftCryExport')
     view.BeginEdit()
-    view.Resize(400, 150)
+    view.Resize(400, 190)
     view.SetAttributeValue('targetcontent', pS.FullName)
     view.EndEdit()
     return True

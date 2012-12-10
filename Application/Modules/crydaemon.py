@@ -51,10 +51,19 @@ class CryMaterial(object):
 
 class ColladaEditor(object):
     def __init__(self, config, materials=None, clips=None):
+        # config keys:
+        #   donotmerge      bool
+        #   path            string
+        #   nustomnormals   bool
+        #   filetype        string  : cgf | cgaanm | chrcaf
+        #   rcpath          string
+        #   unit            string  : meter | centimeter
+        #   onlymaterials   bool
+        #   scenename       string
         self.config = config
         self.tree = None
         self.vertex_count = 0
-        self.scene_name = os.path.basename(self.config['path'])[:-4]
+        self.scene_name = config['scenename']  # os.path.basename(self.config['path'])[:-4]
         self.material_names, self.materials = self.adjust_materials(materials)
         self.controllers = {}
         self.clips = self.adjust_clips(clips)
@@ -445,10 +454,64 @@ class ColladaEditor(object):
         tool.text = 'Softimage Crosswalk exporter featuring SoftCry exporter by Ande'
         unit = asset.find('unit')
         unit.set('meter', '1')
-        unit.set('name', 'meter')
+        unit.set('name', self.config['unit'])
         up_axis = asset.find('up_axis')
         up_axis.text = 'Y_UP'
         l.info('Adjusted asset.')
+
+    def remove_geometries(self):
+        l.info('Removing geometries.')
+        lib_geoms = self.root.find('library_geometries')
+        if lib_geoms is not None:
+            self.root.remove(lib_geoms)
+            l.info('Removed geometries.')
+            return
+        l.info('No geometries.')
+
+    def remove_controllers(self):
+        l.info('Removing controllers.')
+        lib_ctrls = self.root.find('library_controllers')
+        if lib_ctrls is not None:
+            self.root.remove(lib_ctrls)
+            l.info('Removed controllers.')
+            return
+        l.info('No controllers.')
+
+    def remove_animations(self):
+        l.info('Removing animations.')
+        lib_animations = self.root.find('library_animations')
+        if lib_animations is not None:
+            self.root.remove(lib_animations)
+            l.info('Removed animations.')
+            return
+        l.info('No animations.')
+
+    def remove_clips(self):
+        l.info('Removing clips.')
+        lib_clips = self.root.find('library_animation_clips')
+        if lib_clips is not None:
+            self.root.remove(lib_clips)
+            l.info('Removed clips.')
+            return
+        l.info('No clips.')
+
+    def remove_scenes(self):
+        l.info('Removing scenes.')
+        lib_scenes = self.root.find('library_visual_scenes')
+        if lib_scenes is not None:
+            self.root.remove(lib_scenes)
+            l.info('Removed scenes.')
+            return
+        l.info('No scenes.')
+
+    def remove_scene(self):
+        l.info('Removing scene.')
+        lib_scene = self.root.find('scene')
+        if lib_scene is not None:
+            self.root.remove(lib_scene)
+            l.info('Removed scene.')
+            return
+        l.info('No scene.')
 
     def prepare_for_rc(self):
         self.temp_path = os.path.join(os.path.dirname(self.config['path']), 'tempfile')
@@ -457,27 +520,39 @@ class ColladaEditor(object):
         self.tree = ElementTree(file=self.temp_path)
         self.root = self.tree.getroot()
 
-        # self.remove_library_effects()
+        if self.config['onlymaterials']:
+            self.remove_geometries()
 
-        self.adjust_asset()
+            self.remove_controllers()
 
-        self.prepare_library_images()
+            self.remove_animations()
 
-        self.prepare_library_effects()
+            self.remove_clips()
 
-        self.prepare_library_materials()
+            self.remove_scenes()
 
-        self.prepare_library_geometries()
+            self.remove_scene()
 
-        self.prepare_library_animations()
+        else:
+            self.adjust_asset()
 
-        self.prepare_library_controllers()
+            self.prepare_library_images()
 
-        self.prepare_visual_scenes()
+            self.prepare_library_effects()
 
-        #self.indent(self.root)
+            self.prepare_library_materials()
 
-        self.add_library_animation_clips()
+            self.prepare_library_geometries()
+
+            self.prepare_library_animations()
+
+            self.prepare_library_controllers()
+
+            self.prepare_visual_scenes()
+
+            #self.indent(self.root)
+
+            self.add_library_animation_clips()
 
         self.tree = ElementTree(element=self.root)
 
