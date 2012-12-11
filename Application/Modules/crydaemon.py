@@ -125,6 +125,64 @@ class ColladaEditor(object):
     def replace(self, node, attribute, to_replace, with_this):
         node.set(attribute, node.get(attribute).replace(to_replace, with_this))
 
+    def round3(self, text):
+        # Doesn't actually round right now.
+        lines = text.split('\n')
+        new_text = []
+        l.info('Rounding {0} lines.'.format(len(lines)))
+        for line in lines:
+            if not line:
+                continue
+            line = line.strip()
+            if not line:
+                l.error('Line "{0}" not valid.'.format(repr(line)))
+            try:
+                x, y, z = line.split(' ')
+            except ValueError:
+                l.error('Line "{0}" not valid.'.format(line.split(' ')))
+            #x = round(float(x), 2)
+            #y = round(float(y), 2)
+            #z = round(float(z), 2)
+            new_text.extend((str(x), str(y), str(z)))
+        return ' '.join(new_text)
+
+    def round2(self, text):
+        # Doesn't actually round right now.
+        lines = text.split('\n')
+        new_text = []
+        l.info('Rounding {0} lines.'.format(len(lines)))
+        for line in lines:
+            if not line:
+                continue
+            line = line.strip()
+            if not line:
+                l.error('Line "{0}" not valid.'.format(repr(line)))
+            try:
+                x, y = line.split(' ')
+            except ValueError:
+                l.error('Line "{0}" not valid.'.format(line.split(' ')))
+            #x = round(float(x), 2)
+            #y = round(float(y), 2)
+            #z = round(float(z), 2)
+            new_text.extend((str(x), str(y)))
+        return ' '.join(new_text)
+
+    def roundx(self, text):
+        # Doesn't actually round right now.
+        lines = text.split('\n')
+        new_text = []
+        l.info('Rounding {0} lines.'.format(len(lines)))
+        for line in lines:
+            if not line:
+                continue
+            line = line.strip()
+            if not line:
+                l.error('Line "{0}" not valid.'.format(repr(line)))
+            items = line.split(' ')
+            # theoretically do rounding.
+            new_text.extend(items)
+        return ' '.join(new_text)
+
     def prepare_library_geometries(self):
         l.info('Preparing Library Geometries.')
         lib_geoms = self.root.find('library_geometries')
@@ -148,18 +206,21 @@ class ColladaEditor(object):
                     acc = source.find('technique_common').find('accessor')
                     acc.attrib['source'] = acc.attrib['source'].replace('Pos', 'positions')
                     self.vertex_count = int(f_array.attrib['count'])
+                    f_array.text = self.round3(f_array.text)
                 elif 'XSINormal' in source.attrib['id']:
                     source.attrib['id'] = source.attrib['id'].replace('XSINormal', 'normals')
                     f_array = source.find('float_array')
                     f_array.attrib['id'] = f_array.attrib['id'].replace('XSINormal', 'normals')
                     acc = source.find('technique_common').find('accessor')
                     acc.attrib['source'] = acc.attrib['source'].replace('XSINormal', 'normals')
+                    f_array.text = self.round3(f_array.text)
                 elif 'Texture_Projection' in source.attrib['id']:
                     source.attrib['id'] = source.attrib['id'].replace('Texture_Projection', 'coords')
                     f_array = source.find('float_array')
                     f_array.attrib['id'] = f_array.attrib['id'].replace('Texture_Projection', 'coords')
                     acc = source.find('technique_common').find('accessor')
                     acc.attrib['source'] = acc.attrib['source'].replace('Texture_Projection', 'coords')
+                    f_array.text = self.round2(f_array.text)
             # Adjust vertices element id from 'Vtx' to 'vertices'.
             vertices = mesh.find('vertices')
             if 'Vtx' in vertices.attrib['id']:
@@ -179,9 +240,13 @@ class ColladaEditor(object):
                         input_.attrib['source'] = input_.attrib['source'].replace('XSINormal', 'normals')
                     elif input_.attrib['semantic'] == 'TEXCOORD':
                         input_.attrib['source'] = input_.attrib['source'].replace('Texture_Projection', 'coords')
+                p = tris.find('p')
+                if p is not None:
+                    p.text = self.roundx(p.text)
                 if tris.find('vcount') is None:
                     vcount = SubElement(tris, 'vcount')
-                    vcount.text = ' '.join(['3'] * self.vertex_count)
+                    #vcount.text = ' '.join(['3'] * self.vertex_count)
+                    vcount.text = ' '.join(['3'] * int(tris.get('count')))
             l.info('Finished preparing {0}.'.format(geom.get('id')))
 
     def prepare_visual_scenes(self):
@@ -219,7 +284,7 @@ class ColladaEditor(object):
         for node in nodes:
             self.recursive_adjust_nodes(node)
         self.adjust_instance_materials(rootnode)
-        extra = SubElement(rootnode, 'extra')
+        '''extra = SubElement(rootnode, 'extra')
         tech = SubElement(extra, 'technique')
         tech.set('profile', 'CryEngine')
         props = SubElement(tech, 'properties')
@@ -230,7 +295,7 @@ class ColladaEditor(object):
             bb_max = SubElement(helper, 'bound_box_max')
             bb_max.text = '0.5 0.5 0.5'
             bb_min = SubElement(helper, 'bound_box_min')
-            bb_min.text = '-0.5 -0.5 -0.5'
+            bb_min.text = '-0.5 -0.5 -0.5'''
 
     def adjust_instance_materials(self, node):
         inst = node.find('instance_geometry')
@@ -453,7 +518,11 @@ class ColladaEditor(object):
         tool = asset.find('contributor').find('authoring_tool')
         tool.text = 'Softimage Crosswalk exporter featuring SoftCry exporter by Ande'
         unit = asset.find('unit')
-        unit.set('meter', '1')
+        if self.config['unit'] != 'meter':
+            del unit.attrib['meter']
+            unit.set(self.config['unit'], '1')
+        else:
+            unit.set('meter', '1')
         unit.set('name', self.config['unit'])
         up_axis = asset.find('up_axis')
         up_axis.text = 'Y_UP'
