@@ -14,7 +14,6 @@ def Export_OnClicked():
     config['donotmerge'] = params('donotmerge').Value
     config['filetype'] = params('filetype').Value
     config['batch'] = params('batch').Value
-    config['onlymaterials'] = params('onlymaterials').Value
     config['unit'] = params('unit').Value
     crycore.save_settings(xsi, config)
     export = andecryexport.Export(xsi, config)

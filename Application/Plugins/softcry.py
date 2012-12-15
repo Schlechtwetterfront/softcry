@@ -72,13 +72,12 @@ def SoftCryExport_Execute():
         pS.AddParameter3('customnormals', const.siBool, config['customnormals'], '', 0, 0)
         pS.AddParameter3('donotmerge', const.siBool, config['donotmerge'], '', 0, 0)
         pS.AddParameter3('filetype', const.siString, config['filetype'], '', 0, 0)
-        file_types = ('CGF', 'cgf', 'CGA', 'cgaanm', 'CHRCAF', 'chrcaf')
+        file_types = ('CGF', 'cgf', 'CGA', 'cgaanm', 'CHRCAF', 'chrcaf', 'Material', 'matlib')
 
         pS.AddParameter3('unit', const.siString, config['unit'], '', 0, 0)
         units = 'Meter', 'meter', 'Centimeter', 'centimeter'
 
         pS.AddParameter3('batch', const.siBool, config['batch'], '', 0, 0)
-        pS.AddParameter3('onlymaterials', const.siBool, config['onlymaterials'], '', 0, 0)
     except KeyError:
         crycore.default_settings(xsi)
         xsi.SoftCryExport()

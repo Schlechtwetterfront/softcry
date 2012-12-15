@@ -20,11 +20,10 @@ def default_settings(xsi):
         'donotmerge': True,
         'path': 'E:\\AndeSoft\\Projects\\CE\\File\\softtest.dae',
         'customnormals': True,
-        'filetype': 'cgf',  # cgf | cgaanm | chrcaf
+        'filetype': 'cgf',  # cgf | cgaanm | chrcaf | matlib
         'rcpath': 'E:\\AndeSoft\\CE_343\\Bin32\\rc',
         'unit': 'meter',  # meter | centimeter
         'batch': False,
-        'onlymaterials': False,
     }
     path = os.path.join(xsi.InstallationPath(const.siUserAddonPath), 'SoftCry', 'Resources', 'settings')
     with open(path, 'w') as fh:
@@ -40,6 +39,5 @@ def get_default_settings():
         'rcpath': 'E:\\AndeSoft\\CE_343\\Bin32\\rc',
         'unit': 'meter',  # meter | centimeter
         'batch': False,
-        'onlymaterials': False,
     }
     return sett

@@ -11,6 +11,78 @@ now = datetime.now
 import logging
 
 
+class MaterialConverter(andesicore.SIMaterial):
+    def __init__(self, simat, index, libname, matman):
+        self.matman = matman
+        self.simat = simat
+        self.crymat = crydaemon.CryMaterial()
+        self.crymat.index = index + 1
+        self.libname = libname
+        self.index = index + 1
+
+    def convert(self):
+        self.crymat.phys = self.get_phys()
+        # self.crymat.emission
+        self.crymat.ports['ambient'] = self.get_port('ambient')
+        self.crymat.ports['diffuse'] = self.get_port('diffuse')
+        self.crymat.ports['specular'] = self.get_port('specular')
+        self.crymat.ports['shininess'] = self.get_value('shiny')
+        self.crymat.ports['reflective'] = self.get_port('reflectivity')
+        self.crymat.ports['reflectivity'] = self.get_value('scalerefl')
+        self.crymat.ports['transparent'] = self.get_port('transparency')
+        self.crymat.ports['transparency'] = self.get_value('scaletrans')
+        self.crymat.ports['index_of_refraction'] = self.get_value('index_of_refraction')
+        self.crymat.ports['normal'] = self.get_normal()
+        self.crymat.old_name = self.simat.Name
+        self.crymat.name = '{0}__{1}__{2}__{3}'.format(self.libname, self.index, self.simat.Name, self.crymat.phys)
+        return self.crymat
+
+    def get_port(self, port_name):
+        shader = self.simat.Shaders(0)
+        img_out = shader.Parameters(port_name).Source
+        if not img_out:
+            col = shader.Parameters(port_name).Value
+            return crydaemon.CryColor(col.Red, col.Green, col.Blue, col.Alpha)
+        img = img_out.Parent
+        if not img:
+            return crydaemon.CryColor(0, 0, 0, 0)
+        # tex_source = img.tex.Source  # <- doesn't work in ModTool (XSI 7.5)
+        tex_source = img.ImageClips(0)
+        if not tex_source:
+            return crydaemon.CryColor(0, 0, 0, 0)
+        relative_filepath = tex_source.Source.Parameters('FileName').Value
+        img = crydaemon.CryImageClip(relative_filepath)
+        return self.matman.add_clip(img)
+
+    def get_value(self, name):
+        shader = self.simat.Shaders(0)
+        param = shader.Parameters(name)
+        if param:
+            return param.Value
+
+    def get_normal(self):
+        shader = self.simat.Shaders(0)
+        col2vec_out = shader.Parameters('bump').Source
+        if not col2vec_out:
+            return None
+        col2vec = col2vec_out.Parent
+        img_out = col2vec.input.Source
+        if not img_out:
+            return None
+        img = img_out.Parent
+        rel_path = img.ImageClips(0).Source.Parameters('FileName').Value
+        img = crydaemon.CryImageClip(rel_path)
+        return self.matman.add_clip(img)
+
+    def get_phys(self):
+        phys = 'physDefault'
+        for prop in self.simat.Properties:
+            if 'SoftCryProp' in prop.Name:
+                phys = prop.Parameters('phys').Value
+                return phys
+        return phys
+
+
 class Export(andesicore.SIGeneral):
     def __init__(self, xsi, config):
         self.xsi = xsi
@@ -87,31 +159,18 @@ class Export(andesicore.SIGeneral):
             clips.append(crydaemon.CryClip(name, int(starts[index]), int(ends[index])))
         return clips
 
-    def get_normal_map(self, mat):
-        shader = mat.Shaders(0)
-        col2vec_out = shader.Parameters('bump').Source
-        if not col2vec_out:
-            return None
-        col2vec = col2vec_out.Parent
-        img_out = col2vec.input.Source
-        if not img_out:
-            return None
-        img = img_out.Parent
-        return img.ImageClips(0).Source.Parameters('FileName').Value
-
-    def retrieve_materials(self):
+    def retrieve_materials(self, matman):
         lib = self.xsi.ActiveProject.ActiveScene.ActiveMaterialLibrary
-        self.materials = []
+        matman.material_list = []
+        matman.material_dict = {}
+        matman.clip_list = []
+        matman.clip_dict = {}
         logging.info('Retrieving materials.')
         for ind, mat in enumerate(lib.Items):
-            phys = 'physDefault'
-            normal = ''  # self.get_normal_map(mat)
-            for prop in mat.Properties:
-                if 'SoftCryProp' in prop.Name:
-                    phys = prop.Parameters('phys').Value
-            cm = crydaemon.CryMaterial(mat.Name, ind, normal, phys)
-            self.materials.append(cm)
-        logging.info('Retrieved {0} materials.'.format(len(self.materials)))
+            conv = MaterialConverter(mat, ind, lib.Name, matman)
+            matman.add_material(conv.convert())
+            #self.materials.append(conv.convert())
+        logging.info('Retrieved materials.')
 
     def retrieve_clips(self):
         logging.info('Retrieving animation clips.')
@@ -123,6 +182,13 @@ class Export(andesicore.SIGeneral):
 
     def export(self):
         logging.info('Starting export at {0}.'.format(str(now())))
+        if self.config['filetype'] == 'matlib':
+            matmanager = crydaemon.CryMaterialManager()
+            self.retrieve_materials(matmanager)
+            self.do_material_export(matmanager)
+            logging.info('Finished material export.')
+            return
+
         if self.config['batch']:
             self.selection = self.xsi.Selection(0)
             roots = self.selection.Children
@@ -131,11 +197,12 @@ class Export(andesicore.SIGeneral):
                 self.xsi.Selection.Clear()
                 for obj in to_select:
                     self.xsi.Selection.Add(obj)
-                self.retrieve_materials()
+                matmanager = crydaemon.CryMaterialManager()
+                self.retrieve_materials(matmanager)
                 self.retrieve_clips()
                 newpath = self.config['path'].split('\\')
                 newpath[-1] = '{0}.dae'.format(root.Name)
-                self.do_export('\\'.join(newpath))
+                self.do_export(matmanager, '\\'.join(newpath))
             self.xsi.Selection.Clear()
             self.xsi.Selection.Add(self.selection)
             logging.info('Finished export.')
@@ -145,45 +212,47 @@ class Export(andesicore.SIGeneral):
             logging.error('No selection')
             self.msg('No selection.', plugin='SoftCry')
             raise SystemExit
-        self.hierarchy = self.get_all_children(self.selection)
+        try:
+            self.hierarchy = self.get_all_children(self.selection)
+        except AttributeError:
+            logging.exception('')
+            self.msg('Selection({0}: {1}) not valid.'.format(self.selection.Name, self.selection.Type), plugin='SoftCry')
+            raise SystemExit
         if not self.hierarchy:
             logging.error('No valid selection')
             self.msg('No selection.', plugin='SoftCry')
             raise SystemExit
-        self.retrieve_materials()
+        matmanager = crydaemon.CryMaterialManager()
+        self.retrieve_materials(matmanager)
         self.retrieve_clips()
-        self.do_export()
+        self.do_export(matmanager)
         logging.info('Finished export.')
         #logging.shutdown()
 
-    def do_export(self, path=None):
+    def do_material_export(self, matman):
+        libname = self.xsi.ActiveProject.ActiveScene.ActiveMaterialLibrary.Name
+        writer = crydaemon.ColladaWriter()
+        writer.material_manager = matman
+        writer.material_lib_name = libname
+        logging.info('Starting only-material collada writing.')
+        writer.write_materials(self.config['path'])
+        logging.info('Finished writing Collada file to {0}.'.format(self.config['path']))
+        exepath = os.path.join(self.config['rcpath'], 'rc.exe')
+        logging.info('Calling Resource Compiler with "{0} {1} /createmtl=1"'.format(exepath, self.config['path']))
+        p = subprocess.Popen((exepath, '{0}'.format(self.config['path']), '/createmtl=1'), stdout=subprocess.PIPE)
+        logging.info(p.communicate()[0])
+
+    def do_export(self, matman, path=None):
         self.create_options()
         logging.info('Starting Crosswalk COLLADA export.')
         self.xsi.ExportCrosswalk('SCCrosswalkOptions')
         logging.info('Finished Crosswalk COLLADA export.')
         logging.info('Starting .DAE preparation.')
         self.config['scenename'] = os.path.basename(path or self.config['path'])[:-4]
-        ed = crydaemon.ColladaEditor(self.config, self.materials, self.clips)
+        ed = crydaemon.ColladaEditor(self.config, materialman=matman, clips=self.clips)
         ed.prepare_for_rc()
         logging.info('Finished .DAE preparation.')
         exepath = os.path.join(self.config['rcpath'], 'rc.exe')
-        if self.config['onlymaterials']:
-            logging.info('Calling Resource Compiler with "{0} {1} {2}"'.format(exepath, self.config['path'], '/createmtl=1'))
-            p = subprocess.Popen((exepath, '{0}'.format(self.config['path']), '/createmtl=1'), stdout=subprocess.PIPE)
-        else:
-            logging.info('Calling Resource Compiler with "{0} {1}"'.format(exepath, self.config['path']))
-            p = subprocess.Popen((exepath, '{0}'.format(self.config['path'])), stdout=subprocess.PIPE)
+        logging.info('Calling Resource Compiler with "{0} {1}"'.format(exepath, self.config['path']))
+        p = subprocess.Popen((exepath, '{0}'.format(self.config['path'])), stdout=subprocess.PIPE)
         logging.info(p.communicate()[0])
-        if self.config['onlymaterials']:
-            orig_path = path or self.config['path']
-            orig_path = orig_path.split('\\')
-            lib_path = orig_path[:-1]
-            lib_path.append('library.mtl')
-            lib_path = '\\'.join(lib_path)
-            new_path = orig_path[:-1]
-            new_path.append(orig_path[-1].replace('dae', 'mtl'))
-            new_path = '\\'.join(new_path)
-            if os.path.isfile(lib_path):
-                if os.path.isfile(new_path):
-                    os.remove(new_path)
-                os.rename(lib_path, new_path)

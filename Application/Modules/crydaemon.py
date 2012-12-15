@@ -1,4 +1,4 @@
-from xml.etree.ElementTree import ElementTree, SubElement  # , dump  # , Element
+from xml.etree.ElementTree import ElementTree, SubElement, Element  # , dump
 import os
 
 import logging as l
@@ -17,6 +17,137 @@ MATERIAL_PHYS = ('physDefault',  # default collision
                 'physNoCollide')  # will collide with bullets
 
 
+class CryMaterialManager(object):
+    def __init__(self):
+        self.material_list = None
+        self.material_dict = None
+        self.material_dict_old = None
+        self.clip_list = None
+        self.clip_dict = None
+
+    def create_old_name_dict(self):
+        oldnames = {}
+        for mat in self.material_list:
+            oldnames[mat.old_name] = mat
+        self.material_dict_old = oldnames
+
+    def get_clip(self, key):
+        if isinstance(key, str):
+            return self.clip_dict[key]
+        elif isinstance(key, int):
+            return self.clip_list[key]
+
+    def get_material(self, key):
+        if isinstance(key, str):
+            return self.material_dict[key]
+        elif isinstance(key, int):
+            return self.material_list[key]
+
+    def add_clip(self, clip):
+        if clip.name in self.clip_dict.keys():
+            return self.clip_dict[clip.name]
+        else:
+            self.clip_list.append(clip)
+            self.clip_dict[clip.name] = clip
+            return clip
+
+    def add_material(self, material):
+        if material.name in self.material_dict.keys():
+            return self.material_dict[material.name]
+        else:
+            self.material_list.append(material)
+            self.material_dict[material.name] = material
+            return material
+
+    def get_lib_fx(self):
+        lib_fx = Element('library_effects')
+        for mat in self.material_list:
+            lib_fx.append(mat.to_xml_fx())
+        return lib_fx
+
+    def get_lib_images(self):
+        lib_images = Element('library_images')
+        for clip in self.clip_list:
+            lib_images.append(clip.to_xml_image())
+        return lib_images
+
+    def get_lib_materials(self):
+        lib_mats = Element('library_materials')
+        for mat in self.material_list:
+            lib_mats.append(mat.to_xml())
+        return lib_mats
+
+
+class CrySource(object):
+    '''Source for Materials. Should always implement .get() which returns the value of the source.'''
+    type = 'CrySource'
+
+    def get(self):
+        return
+
+
+class CryColor(CrySource):
+    type = 'ColorSource'
+
+    def __init__(self, r, g, b, a=0.0):
+        self.r = r
+        self.g = g
+        self.b = b
+        self.a = a
+
+    def get(self):
+        return '{0} {1} {2} {3}'.format(self.r, self.g, self.b, self.a)
+
+    def to_xml(self, color_name):
+        col = Element('color')
+        col.set('sid', color_name)
+        col.text = self.get()
+        return col
+
+
+class CryImageClip(CrySource):
+    type = 'ImageSource'
+
+    def __init__(self, imagename):
+        self.name = imagename.split('\\')[-1]
+        print 'CryImageClip name: ', self.name
+        self.image = imagename
+        print 'CryImageClip image: ', self.image
+
+    def get(self):
+        return self.image
+
+    def to_xml_image(self):
+        img = Element('image')
+        img.set('id', self.name)
+        img.set('name', self.name)
+        init = SubElement(img, 'init_from')
+        init.text = self.image
+        return img
+
+    def to_xml_texture(self):
+        tex = Element('texture')
+        tex.set('texture', '{0}_sampler'.format(self.name))
+        return tex
+
+    def to_xml_sampler(self):
+        param = Element('newparam')
+        param.set('sid', '{0}_sampler'.format(self.name))
+        sampler = SubElement(param, 'sampler2D')
+        source = SubElement(sampler, 'source')
+        source.text = '{0}_surface'.format(self.name)
+        return param
+
+    def to_xml_surface(self):
+        param = Element('newparam')
+        param.set('sid', '{0}_surface'.format(self.name))
+        surf = SubElement(param, 'surface')
+        surf.set('type', '2D')
+        init = SubElement(surf, 'init_from')
+        init.text = self.name
+        return param
+
+
 class CryClip(object):
     def __init__(self, name, start, end):
         self.name = name
@@ -32,25 +163,99 @@ class CryClip(object):
 
 
 class CryMaterial(object):
-    def __init__(self, name, index, normalmap, phys):
-        self.name = name
-        self.index = index
-        self.phys = phys
-        self.normal_map = normalmap
+    def __init__(self):
+        self.name = 'MATERIAL'
+        self.old_name = ''  # name in Softimage.
+        self.index = 0
+        self.phys = 'physDefault'  # String
+        self.ports = {
+            'emission': CryColor(0, 0, 0, 0),
+            'ambient': CryColor(0.3, 0.3, 0.3, 1),
+            'diffuse': CryColor(0.7, 0.7, 0.7, 1),
+            'specular': CryColor(1, 1, 1, 1),
+            'shininess': 50,
+            'reflective': CryColor(0, 0, 0, 0),
+            'reflectivity': 1,
+            'transparent': CryColor(0, 0, 0, 0),
+            'transparency': 1,
+            'index_of_refraction': 1,
+            'normal': None,
+        }
 
-    def get_normal_map_name(self):
-        return os.path.basename(self.normal_map).replace('.', '_')
+    def to_xml(self):
+        mat = Element('material')
+        mat.set('id', self.name)
+        mat.set('name', self.name)
+        inst = SubElement(mat, 'instance_effect')
+        inst.set('url', '#{0}_fx'.format(self.name))
+        return mat
 
-    def get_adjusted_name(self, scenename=None):
-        if scenename:
-            return '{0}__{1}__{2}__{3}'.format(scenename, self.index + 1,
-                                                self.name, self.phys)
+    def to_xml_fx(self):
+        effect = Element('effect')
+        effect.set('id', '{0}_fx'.format(self.name))
+        effect.set('name', '{0}_fx'.format(self.name))
+        profile = SubElement(effect, 'profile_COMMON')
+        tech = SubElement(profile, 'technique')
+        tech.set('sid', 'default')
+        phong = SubElement(tech, 'phong')
+        for port in self.ports.keys():
+            port_node = SubElement(phong, port)
+            source = self.ports[port]
+            if not source:
+                phong.remove(port_node)
+                continue
+            if isinstance(source, float) or isinstance(source, int):
+                float_node = SubElement(port_node, 'float')
+                float_node.set('sid', port)
+                float_node.text = str(source)
+            elif source.type == 'ColorSource':
+                port_node.append(source.to_xml(port))
+            elif source.type == 'ImageSource':
+                port_node.append(source.to_xml_texture())
+                profile.append(source.to_xml_surface())
+                profile.append(source.to_xml_sampler())
+        return effect
+
+
+class ColladaWriter(object):
+    def __init__(self):
+        self.material_manager = None
+
+    def indent(self, elem, level=0):
+        i = '\n' + level * '\t'
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + '\t'
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+            for elem in elem:
+                self.indent(elem, level + 1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
         else:
-            return '{0}__sub{1}__{2}'.format(self.index + 1, self.index + 1, self.phys)
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
+
+    def get_asset(self):
+        asset = Element('asset')
+        contributor = SubElement(asset, 'contributor')
+        tool = SubElement(contributor, 'authoring_tool')
+        tool.text = 'SoftCry exporter by Ande'
+        return asset
+
+    def write_materials(self, path):
+        collada = Element('collada')
+        collada.append(self.get_asset())
+        collada.append(self.material_manager.get_lib_images())
+        collada.append(self.material_manager.get_lib_fx())
+        collada.append(self.material_manager.get_lib_materials())
+        self.indent(collada)
+        tree = ElementTree(element=collada)
+        tree.write(path)
 
 
 class ColladaEditor(object):
-    def __init__(self, config, materials=None, clips=None):
+    def __init__(self, config, materialman=None, clips=None):
         # config keys:
         #   donotmerge      bool
         #   path            string
@@ -64,7 +269,7 @@ class ColladaEditor(object):
         self.tree = None
         self.vertex_count = 0
         self.scene_name = config['scenename']  # os.path.basename(self.config['path'])[:-4]
-        self.material_names, self.materials = self.adjust_materials(materials)
+        self.material_manager = materialman
         self.controllers = {}
         self.clips = self.adjust_clips(clips)
 
@@ -90,14 +295,6 @@ class ColladaEditor(object):
             clip.adjust_name(self.scene_name)
             clip.adjust_time()
         return clips
-
-    def adjust_materials(self, materials):
-        dc = {}
-        names = {}
-        for mat in materials:
-            names[mat.name] = mat.get_adjusted_name(self.scene_name)
-            dc[mat.name] = mat
-        return names, dc
 
     def get_adjusted(self):
         with open(self.config['path'], 'r') as fh:
@@ -231,7 +428,9 @@ class ColladaEditor(object):
             # Adjust material name.
             triangles = mesh.findall('triangles')
             for tris in triangles:
-                tris.attrib['material'] = self.material_names[tris.attrib['material']]
+                print tris.get('material')
+                print self.material_manager.material_dict_old.keys()
+                tris.attrib['material'] = self.material_manager.material_dict_old[tris.attrib['material']].name
                 inputs = tris.findall('input')
                 for input_ in inputs:
                     if input_.attrib['semantic'] == 'VERTEX':
@@ -269,7 +468,7 @@ class ColladaEditor(object):
             flags.append('DoNotMerge')
         if self.config['customnormals']:
             flags.append('CustomNormals')
-        props.text = '\n'.join(flags)
+        props.text = '\n\t\t'.join(flags)
         l.info('Applied flags "{0}" to CryExport Node.'.format(' '.join(flags)))
         # Remove nodes.
         for node in root_nodes:
@@ -310,7 +509,7 @@ class ColladaEditor(object):
             tech = bind_mat.find('technique_common')
             if tech is not None:
                 for inst_mat in tech:
-                    newname = self.material_names[inst_mat.attrib['symbol']]
+                    newname = self.material_manager.material_dict_old[inst_mat.attrib['symbol']].name
                     inst_mat.attrib['symbol'] = newname
                     inst_mat.attrib['target'] = '#{0}'.format(newname)
 
@@ -320,6 +519,9 @@ class ColladaEditor(object):
         if lib_materials is None:
             l.error('No materials.')
             return
+        self.root.remove(lib_materials)
+        self.root.append(self.material_manager.get_lib_materials())
+        return
         for lib_mat in lib_materials:
             newname = self.material_names[lib_mat.attrib['id']]
             l.info('Setting ID and name from "{0}" to "{1}"'.format(lib_mat.get('id'), newname))
@@ -473,6 +675,9 @@ class ColladaEditor(object):
         if lib_images is None:
             l.info('No images.')
             return
+        self.root.remove(lib_images)
+        self.root.append(self.material_manager.get_lib_images())
+        return
         for image in lib_images:
             attribs = ('depth', 'format', 'height', 'width')
             for el in attribs:
@@ -486,6 +691,9 @@ class ColladaEditor(object):
         lib_effects = self.root.find('library_effects')
         if lib_effects is None:
             return
+        self.root.remove(lib_effects)
+        self.root.append(self.material_manager.get_lib_fx())
+        return
         for effect in lib_effects:
             material_name = effect.get('id')[:-3]
             print material_name
@@ -582,6 +790,14 @@ class ColladaEditor(object):
             return
         l.info('No scene.')
 
+    def recursive_strip(self, elem):
+        if elem.tail:
+            elem.tail = elem.tail.strip()
+        if elem.text:
+            elem.text = elem.text.strip()
+        for child in elem:
+            self.recursive_strip(child)
+
     def prepare_for_rc(self):
         self.temp_path = os.path.join(os.path.dirname(self.config['path']), 'tempfile')
         with open(self.temp_path, 'w') as fh:
@@ -589,7 +805,13 @@ class ColladaEditor(object):
         self.tree = ElementTree(file=self.temp_path)
         self.root = self.tree.getroot()
 
-        if self.config['onlymaterials']:
+        self.material_manager.create_old_name_dict()
+
+        self.recursive_strip(self.root)
+
+        '''if self.config['onlymaterials']:
+            self.adjust_asset()
+
             self.remove_geometries()
 
             self.remove_controllers()
@@ -602,26 +824,26 @@ class ColladaEditor(object):
 
             self.remove_scene()
 
-        else:
-            self.adjust_asset()
+        else:'''
+        self.adjust_asset()
 
-            self.prepare_library_images()
+        self.prepare_library_images()
 
-            self.prepare_library_effects()
+        self.prepare_library_effects()
 
-            self.prepare_library_materials()
+        self.prepare_library_materials()
 
-            self.prepare_library_geometries()
+        self.prepare_library_geometries()
 
-            self.prepare_library_animations()
+        self.prepare_library_animations()
 
-            self.prepare_library_controllers()
+        self.prepare_library_controllers()
 
-            self.prepare_visual_scenes()
+        self.prepare_visual_scenes()
 
-            #self.indent(self.root)
+        self.add_library_animation_clips()
 
-            self.add_library_animation_clips()
+        self.indent(self.root)
 
         self.tree = ElementTree(element=self.root)
 
