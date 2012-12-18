@@ -273,6 +273,13 @@ class ColladaEditor(object):
         self.controllers = {}
         self.clips = self.adjust_clips(clips)
 
+    def get_fixed_path(self):
+        path = self.config['path']
+        if not path.endswith('.dae'):
+            return '{0}.dae'.format(path)
+        else:
+            return path
+
     def indent(self, elem, level=0):
         i = '\n' + level * '\t'
         if len(elem):
@@ -297,7 +304,7 @@ class ColladaEditor(object):
         return clips
 
     def get_adjusted(self):
-        with open(self.config['path'], 'r') as fh:
+        with open(self.get_fixed_path(), 'r') as fh:
             newfile = []
             for line in fh:
                 if line[:2] == '<?':
@@ -483,6 +490,9 @@ class ColladaEditor(object):
         for node in nodes:
             self.recursive_adjust_nodes(node)
         self.adjust_instance_materials(rootnode)
+        '''if not 'Cry' in rootnode.get('id'):
+            rootnode.set('id', rootnode.get('id').replace('_', '__'))
+            rootnode.set('name', rootnode.get('id'))'''
         '''extra = SubElement(rootnode, 'extra')
         tech = SubElement(extra, 'technique')
         tech.set('profile', 'CryEngine')
@@ -538,10 +548,11 @@ class ColladaEditor(object):
         for controller in lib_controllers:
             l.info('Preparing Controller "{0}".'.format(controller.get('id')))
             for skin in controller:
-                geo_name = skin.get('source')[1:]
+                #geo_name = skin.get('source')[1:]
                 cname = controller.get('id')
-                newname = '{0}_{1}'.format(cname, geo_name)
-                controller.set('id', newname)
+                newname = cname
+                #newname = '{0}_{1}'.format(cname, geo_name)
+                #controller.set('id', newname)
                 self.controllers[cname] = controller.get('id')
                 sources = skin.findall('source')
                 for source in sources:
@@ -551,6 +562,7 @@ class ColladaEditor(object):
                         idref = source.find('IDREF_array')
                         if idref is not None:
                             idref.set('id', '{0}_joints_array'.format(newname))
+                            #idref.text = idref.text.replace('_', '__')      HEEEEREEEE
                         tech = source.find('technique_common')
                         #self.replace_technique_source(tech, '-Joints-array', '_joints_array')
                         acc = tech.find('accessor')
@@ -592,6 +604,19 @@ class ColladaEditor(object):
                         elif 'Weights' in input_.get('source'):
                             #self.replace(input_, 'source', '-Weights', '_weights')
                             input_.set('source', '#{0}_weights'.format(newname))
+                    v = v_weights.find('v')
+                    if v is not None:
+                        lines = v.text.split('\n')
+                        new_lines = []
+                        #per_line_count = 0
+                        #lines_count = len(lines)
+                        for line in lines:
+                            new_line = line.strip().split(' ')
+                            #per_line_count = len(new_line) / 2
+                            new_lines.extend(new_line)
+                        v.text = ' '.join(new_lines)
+                        #vc = SubElement(v_weights, 'vcount')
+                        #vc.text = ' '.join([str(per_line_count)] * lines_count)
         l.info('Finished preparing controllers.')
 
     def prepare_library_animations(self):
@@ -652,6 +677,10 @@ class ColladaEditor(object):
             channel = anim.find('channel')
             if channel is not None:
                 self.replace(channel, 'source', to_replace, with_this)
+                target = channel.get('target')
+                target = target.split('/')
+                target[0] = '{0}%{1}%'.format(target[0], self.scene_name)
+                channel.set('target', '/'.join(target))
         l.info('Finished preparing Library Animations.')
 
     def add_library_animation_clips(self):
@@ -799,7 +828,7 @@ class ColladaEditor(object):
             self.recursive_strip(child)
 
     def prepare_for_rc(self):
-        self.temp_path = os.path.join(os.path.dirname(self.config['path']), 'tempfile')
+        self.temp_path = os.path.join(os.path.dirname(self.get_fixed_path()), 'tempfile')
         with open(self.temp_path, 'w') as fh:
             fh.writelines(self.get_adjusted())
         self.tree = ElementTree(file=self.temp_path)
@@ -847,6 +876,6 @@ class ColladaEditor(object):
 
         self.tree = ElementTree(element=self.root)
 
-        self.tree.write(self.config['path'])
+        self.tree.write(self.get_fixed_path())
 
         os.remove(self.temp_path)

@@ -39,7 +39,10 @@ class MaterialConverter(andesicore.SIMaterial):
 
     def get_port(self, port_name):
         shader = self.simat.Shaders(0)
-        img_out = shader.Parameters(port_name).Source
+        port_param = shader.Parameters(port_name)
+        if not port_param:
+            return crydaemon.CryColor(0, 0, 0, 0)
+        img_out = port_param.Source
         if not img_out:
             col = shader.Parameters(port_name).Value
             return crydaemon.CryColor(col.Red, col.Green, col.Blue, col.Alpha)
@@ -62,7 +65,10 @@ class MaterialConverter(andesicore.SIMaterial):
 
     def get_normal(self):
         shader = self.simat.Shaders(0)
-        col2vec_out = shader.Parameters('bump').Source
+        bump_param = shader.Parameters('bump')
+        if not bump_param:
+            return None
+        col2vec_out = bump_param.Source
         if not col2vec_out:
             return None
         col2vec = col2vec_out.Parent
@@ -236,11 +242,18 @@ class Export(andesicore.SIGeneral):
         writer.material_lib_name = libname
         logging.info('Starting only-material collada writing.')
         writer.write_materials(self.config['path'])
-        logging.info('Finished writing Collada file to {0}.'.format(self.config['path']))
+        logging.info('Finished writing Collada file to {0}.'.format(self.get_fixed_path()))
         exepath = os.path.join(self.config['rcpath'], 'rc.exe')
-        logging.info('Calling Resource Compiler with "{0} {1} /createmtl=1"'.format(exepath, self.config['path']))
-        p = subprocess.Popen((exepath, '{0}'.format(self.config['path']), '/createmtl=1'), stdout=subprocess.PIPE)
+        logging.info('Calling Resource Compiler with "{0} {1} /createmtl=1"'.format(exepath, self.get_fixed_path()))
+        p = subprocess.Popen((exepath, '{0}'.format(self.get_fixed_path()), '/createmtl=1'), stdout=subprocess.PIPE)
         logging.info(p.communicate()[0])
+
+    def get_fixed_path(self):
+        path = self.config['path']
+        if not path.endswith('.dae'):
+            return '{0}.dae'.format(path)
+        else:
+            return path
 
     def do_export(self, matman, path=None):
         self.create_options()
@@ -248,11 +261,11 @@ class Export(andesicore.SIGeneral):
         self.xsi.ExportCrosswalk('SCCrosswalkOptions')
         logging.info('Finished Crosswalk COLLADA export.')
         logging.info('Starting .DAE preparation.')
-        self.config['scenename'] = os.path.basename(path or self.config['path'])[:-4]
+        self.config['scenename'] = os.path.basename(path or self.get_fixed_path())[:-4]
         ed = crydaemon.ColladaEditor(self.config, materialman=matman, clips=self.clips)
         ed.prepare_for_rc()
         logging.info('Finished .DAE preparation.')
         exepath = os.path.join(self.config['rcpath'], 'rc.exe')
-        logging.info('Calling Resource Compiler with "{0} {1}"'.format(exepath, self.config['path']))
-        p = subprocess.Popen((exepath, '{0}'.format(self.config['path'])), stdout=subprocess.PIPE)
+        logging.info('Calling Resource Compiler with "{0} {1}"'.format(exepath, self.get_fixed_path()))
+        p = subprocess.Popen((exepath, '{0}'.format(self.get_fixed_path())), stdout=subprocess.PIPE)
         logging.info(p.communicate()[0])
