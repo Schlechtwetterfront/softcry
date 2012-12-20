@@ -98,13 +98,14 @@ class Export(andesicore.SIGeneral):
                             filename=logpath,
                             filemode='w',
                             level=logging.DEBUG)
+        self.config['path'] = self.get_fixed_path()
 
     def create_options(self):
         for prop in self.xsi.ActiveSceneRoot.Properties:
             if prop.Name == 'SCCrosswalkOptions':
                 self.xsi.DeleteObj('SCCrosswalkOptions')
         options = self.xsi.ActiveSceneRoot.AddProperty('CustomProperty', False, 'SCCrosswalkOptions')
-        options.AddParameter3('FileName', const.siString, self.config['path'])
+        options.AddParameter3('FileName', const.siString, self.get_fixed_path())
         options.AddParameter3('Format', const.siInt4, 1)  # 1 = Collada file.
         options.AddParameter3('Format1', const.siInt4, 0)
         options.AddParameter3('Verbose', const.siBool, True)  # log to console.
@@ -250,6 +251,7 @@ class Export(andesicore.SIGeneral):
 
     def get_fixed_path(self):
         path = self.config['path']
+        print path
         if not path.endswith('.dae'):
             return '{0}.dae'.format(path)
         else:

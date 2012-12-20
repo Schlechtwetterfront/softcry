@@ -275,6 +275,7 @@ class ColladaEditor(object):
 
     def get_fixed_path(self):
         path = self.config['path']
+        print path
         if not path.endswith('.dae'):
             return '{0}.dae'.format(path)
         else:
