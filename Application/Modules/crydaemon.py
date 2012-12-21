@@ -678,10 +678,6 @@ class ColladaEditor(object):
             channel = anim.find('channel')
             if channel is not None:
                 self.replace(channel, 'source', to_replace, with_this)
-                target = channel.get('target')
-                target = target.split('/')
-                target[0] = '{0}%{1}%'.format(target[0], self.scene_name)
-                channel.set('target', '/'.join(target))
         l.info('Finished preparing Library Animations.')
 
     def add_library_animation_clips(self):
@@ -707,13 +703,6 @@ class ColladaEditor(object):
             return
         self.root.remove(lib_images)
         self.root.append(self.material_manager.get_lib_images())
-        return
-        for image in lib_images:
-            attribs = ('depth', 'format', 'height', 'width')
-            for el in attribs:
-                del image.attrib[el]
-            path = image[0].text
-            image[0].text = os.path.abspath(path)
         l.info('Finished preparing Library Images.')
 
     def prepare_library_effects(self):
