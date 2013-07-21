@@ -269,5 +269,10 @@ class Export(andesicore.SIGeneral):
         logging.info('Finished .DAE preparation.')
         exepath = os.path.join(self.config['rcpath'], 'rc.exe')
         logging.info('Calling Resource Compiler with "{0} {1}"'.format(exepath, self.get_fixed_path()))
-        p = subprocess.Popen((exepath, '{0}'.format(self.get_fixed_path())), stdout=subprocess.PIPE)
+        try:
+            p = subprocess.Popen((exepath, '{0}'.format(self.get_fixed_path())), stdout=subprocess.PIPE)
+        except WindowsError:
+            logging.exception('')
+            self.msg('Make sure your RC path is correct.', plugin='SoftCry')
+            raise SystemExit
         logging.info(p.communicate()[0])

@@ -28,12 +28,27 @@ def XSILoadPlugin(in_reg):
     in_reg.RegisterCommand('SoftCryEditAnimClips', 'SoftCryEditAnimClips')
     in_reg.RegisterCommand('SoftCryCryifyMaterials', 'SoftCryCryifyMaterials')
 
-    corepath = utils.BuildPath(ADDONPATH, 'SoftCry', 'Application', 'Core')
+    orig_path = ''
+    plugins = xsi.Plugins
+    for p in plugins:
+        #print p.Name
+        if p.Name == 'SoftCry':
+            orig_path = p.OriginPath[:-20]
+    print 'orig_path', orig_path
+    if not orig_path:
+        uitk.MsgBox('No orig path.')
+    corepath = utils.BuildPath(orig_path, 'Application', 'Core')
+    if corepath not in sys.path:
+        sys.path.append(corepath)
+    modpath = utils.BuildPath(orig_path, 'Application', 'Modules')
+    if modpath not in sys.path:
+        sys.path.append(modpath)
+    '''corepath = utils.BuildPath(ADDONPATH, 'SoftCry', 'Application', 'Core')
     if corepath not in sys.path:
         sys.path.append(corepath)
     modpath = utils.BuildPath(ADDONPATH, 'SoftCry', 'Application', 'Modules')
     if modpath not in sys.path:
-        sys.path.append(modpath)
+        sys.path.append(modpath)'''
     return True
 
 

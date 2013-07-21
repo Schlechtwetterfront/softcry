@@ -127,6 +127,14 @@ class SIMaterial(object):
 
 
 class SIGeneral(object):
+    @staticmethod
+    def get_plugin_origin(plugin_name):
+        xsi = win32com.client.Dispatch('XSI.Application')
+        plugins = xsi.Plugins
+        for plugin in plugins:
+            if plugin.Name == plugin_name:
+                return plugin.OriginPath[:-20]
+
     def get_objects_by_name(self, modelnames):
         models = []
         for name in modelnames:
