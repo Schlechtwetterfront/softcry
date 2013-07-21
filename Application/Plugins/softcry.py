@@ -13,6 +13,12 @@ MATERIAL_PHYS = ('physDefault',  # default collision
                 'physNone',  # no collision
                 'physObstruct',  # only obstructs AI view
                 'physNoCollide')  # will collide with bullets
+orig_path = ''
+plugins = xsi.Plugins
+for p in plugins:
+    #print p.Name
+    if p.Name == 'SoftCry':
+        orig_path = p.OriginPath[:-20]
 
 
 def XSILoadPlugin(in_reg):
@@ -28,15 +34,7 @@ def XSILoadPlugin(in_reg):
     in_reg.RegisterCommand('SoftCryEditAnimClips', 'SoftCryEditAnimClips')
     in_reg.RegisterCommand('SoftCryCryifyMaterials', 'SoftCryCryifyMaterials')
 
-    orig_path = ''
-    plugins = xsi.Plugins
-    for p in plugins:
-        #print p.Name
-        if p.Name == 'SoftCry':
-            orig_path = p.OriginPath[:-20]
-    print 'orig_path', orig_path
-    if not orig_path:
-        uitk.MsgBox('No orig path.')
+    
     corepath = utils.BuildPath(orig_path, 'Application', 'Core')
     if corepath not in sys.path:
         sys.path.append(corepath)
@@ -99,7 +97,7 @@ def SoftCryExport_Execute():
         return
 
     mLay = pS.PPGLayout
-    mLay.SetAttribute(const.siUILogicFile, ADDONPATH + '\\SoftCry\\Application\\Logic\\exporter.py')
+    mLay.SetAttribute(const.siUILogicFile, orig_path + '\\Application\\Logic\\exporter.py')
     mLay.Language = 'pythonscript'
 
     btn = mLay.AddButton
@@ -208,7 +206,7 @@ def SoftCryEditAnimClips_Execute():
     clips = get_ui_clips(clip_prop)
 
     mLay = pS.PPGLayout
-    mLay.SetAttribute(const.siUILogicFile, ADDONPATH + '\\SoftCry\\Application\\Logic\\clipeditor.py')
+    mLay.SetAttribute(const.siUILogicFile, orig_path + '\\Application\\Logic\\clipeditor.py')
     mLay.Language = 'pythonscript'
 
     g = mLay.AddGroup
