@@ -276,3 +276,5 @@ class Export(andesicore.SIGeneral):
             self.msg('Make sure your RC path is correct.', plugin='SoftCry')
             raise SystemExit
         logging.info(p.communicate()[0])
+        if self.config['deluncompiled']:
+            os.remove(self.get_fixed_path())

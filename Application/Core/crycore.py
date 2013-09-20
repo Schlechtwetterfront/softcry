@@ -24,6 +24,7 @@ def default_settings(xsi):
         'rcpath': 'E:\\AndeSoft\\CE_343\\Bin32\\rc',
         'unit': 'meter',  # meter | centimeter
         'batch': False,
+        'deluncompiled': True,
     }
     path = os.path.join(xsi.InstallationPath(const.siUserAddonPath), 'SoftCry', 'Resources', 'settings')
     with open(path, 'w') as fh:
@@ -39,5 +40,6 @@ def get_default_settings():
         'rcpath': 'E:\\AndeSoft\\CE_343\\Bin32\\rc',
         'unit': 'meter',  # meter | centimeter
         'batch': False,
+        'deluncompiled': True,
     }
     return sett

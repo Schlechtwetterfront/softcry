@@ -13,12 +13,27 @@ MATERIAL_PHYS = ('physDefault',  # default collision
                 'physNone',  # no collision
                 'physObstruct',  # only obstructs AI view
                 'physNoCollide')  # will collide with bullets
-orig_path = ''
-plugins = xsi.Plugins
-for p in plugins:
-    #print p.Name
-    if p.Name == 'SoftCry':
-        orig_path = p.OriginPath[:-20]
+
+def add_to_path():
+    orig_path = get_origin()
+    corepath = utils.BuildPath(orig_path, 'Application', 'Core')
+    if corepath not in sys.path:
+        sys.path.append(corepath)
+    modpath = utils.BuildPath(orig_path, 'Application', 'Modules')
+    if modpath not in sys.path:
+        sys.path.append(modpath)
+
+
+def get_origin():
+    orig_path = ''
+    plugins = xsi.Plugins
+    for p in plugins:
+        #print p.Name
+        if p.Name == 'SoftCry':
+            orig_path = p.OriginPath[:-20]
+    return orig_path
+
+
 
 
 def XSILoadPlugin(in_reg):
@@ -33,14 +48,10 @@ def XSILoadPlugin(in_reg):
     in_reg.RegisterCommand('SoftCryExport', 'SoftCryExport')
     in_reg.RegisterCommand('SoftCryEditAnimClips', 'SoftCryEditAnimClips')
     in_reg.RegisterCommand('SoftCryCryifyMaterials', 'SoftCryCryifyMaterials')
+    in_reg.RegisterCommand('SoftCryShowLog', 'SoftCryShowLog')
 
     
-    corepath = utils.BuildPath(orig_path, 'Application', 'Core')
-    if corepath not in sys.path:
-        sys.path.append(corepath)
-    modpath = utils.BuildPath(orig_path, 'Application', 'Modules')
-    if modpath not in sys.path:
-        sys.path.append(modpath)
+    
     '''corepath = utils.BuildPath(ADDONPATH, 'SoftCry', 'Application', 'Core')
     if corepath not in sys.path:
         sys.path.append(corepath)
@@ -60,6 +71,7 @@ def SoftCry_Init(in_ctxt):
     oMenu.AddCommandItem('Export...', 'SoftCryExport')
     oMenu.AddCommandItem('Edit Clips...', 'SoftCryEditAnimClips')
     oMenu.AddCommandItem('Cryify Materials', 'SoftCryCryifyMaterials')
+    oMenu.AddCommandItem('Show Export Log', 'SoftCryShowLog')
     return True
 
 
@@ -71,6 +83,7 @@ def SoftCryExport_Init(in_ctxt):
 
 
 def SoftCryExport_Execute():
+    add_to_path()
     import crycore
     reload(crycore)
     config = crycore.load_settings(xsi)
@@ -90,6 +103,8 @@ def SoftCryExport_Execute():
         pS.AddParameter3('unit', const.siString, config['unit'], '', 0, 0)
         units = 'Meter', 'meter', 'Centimeter', 'centimeter'
 
+        pS.AddParameter3('deluncompiled', const.siBool, config['deluncompiled'], '', 0, 0)
+
         pS.AddParameter3('batch', const.siBool, config['batch'], '', 0, 0)
     except KeyError:
         crycore.default_settings(xsi)
@@ -97,7 +112,7 @@ def SoftCryExport_Execute():
         return
 
     mLay = pS.PPGLayout
-    mLay.SetAttribute(const.siUILogicFile, orig_path + '\\Application\\Logic\\exporter.py')
+    mLay.SetAttribute(const.siUILogicFile, get_origin() + '\\Application\\Logic\\exporter.py')
     mLay.Language = 'pythonscript'
 
     btn = mLay.AddButton
@@ -121,6 +136,7 @@ def SoftCryExport_Execute():
 
     grp('Export', 1)
     row()
+    item('deluncompiled', 'Delete Uncompiled')
     item('batch', 'Batch Export')
     item('onlymaterials', 'Only Materials')
     unit = enum('unit', units, 'Unit', const.siControlCombo)
@@ -206,7 +222,7 @@ def SoftCryEditAnimClips_Execute():
     clips = get_ui_clips(clip_prop)
 
     mLay = pS.PPGLayout
-    mLay.SetAttribute(const.siUILogicFile, orig_path + '\\Application\\Logic\\clipeditor.py')
+    mLay.SetAttribute(const.siUILogicFile, get_origin() + '\\Application\\Logic\\clipeditor.py')
     mLay.Language = 'pythonscript'
 
     g = mLay.AddGroup
@@ -302,4 +318,17 @@ def SoftCryCryifyMaterials_Execute():
         layout = mat_prop.PPGLayout
 
         layout.AddEnumControl('phys', mat_phys_special, 'Physicalization', const.siControlCombo)
+    return True
+
+
+def SoftCryShowLog_Init(in_ctxt):
+    oCmd = in_ctxt.Source
+    oCmd.Description = ''
+    oCmd.ReturnValue = True
+    return True
+
+
+def SoftCryShowLog_Execute():
+    import webbrowser
+    webbrowser.open(get_origin() + 'export.log')
     return True
