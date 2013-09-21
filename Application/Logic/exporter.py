@@ -15,6 +15,9 @@ def Export_OnClicked():
     config['filetype'] = params('filetype').Value
     config['batch'] = params('batch').Value
     config['unit'] = params('unit').Value
+    config['deluncompiled'] = params('deluncompiled').Value
+    config['debugdump'] = params('debugdump').Value
+    config['verbose'] = params('verbose').Value
     crycore.save_settings(xsi, config)
     export = andecryexport.Export(xsi, config)
     try:

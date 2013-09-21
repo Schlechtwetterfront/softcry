@@ -14,6 +14,7 @@ MATERIAL_PHYS = ('physDefault',  # default collision
                 'physObstruct',  # only obstructs AI view
                 'physNoCollide')  # will collide with bullets
 
+
 def add_to_path():
     orig_path = get_origin()
     corepath = utils.BuildPath(orig_path, 'Application', 'Core')
@@ -49,8 +50,9 @@ def XSILoadPlugin(in_reg):
     in_reg.RegisterCommand('SoftCryEditAnimClips', 'SoftCryEditAnimClips')
     in_reg.RegisterCommand('SoftCryCryifyMaterials', 'SoftCryCryifyMaterials')
     in_reg.RegisterCommand('SoftCryShowLog', 'SoftCryShowLog')
+    in_reg.RegisterCommand('SoftCryShowRCLog', 'SoftCryShowRCLog')
+    in_reg.RegisterCommand('SoftCryTools', 'SoftCryTools')
 
-    
     
     '''corepath = utils.BuildPath(ADDONPATH, 'SoftCry', 'Application', 'Core')
     if corepath not in sys.path:
@@ -71,7 +73,10 @@ def SoftCry_Init(in_ctxt):
     oMenu.AddCommandItem('Export...', 'SoftCryExport')
     oMenu.AddCommandItem('Edit Clips...', 'SoftCryEditAnimClips')
     oMenu.AddCommandItem('Cryify Materials', 'SoftCryCryifyMaterials')
-    oMenu.AddCommandItem('Show Export Log', 'SoftCryShowLog')
+    oMenu.AddCommandItem('Toolbox...', 'SoftCryTools')
+    sub_menu = win32com.client.Dispatch(oMenu.AddItem('Logs', const.siMenuItemSubmenu))
+    sub_menu.AddCommandItem('Show Export Log', 'SoftCryShowLog')
+    sub_menu.AddCommandItem('Show RC Log', 'SoftCryShowRCLog')
     return True
 
 
@@ -104,8 +109,9 @@ def SoftCryExport_Execute():
         units = 'Meter', 'meter', 'Centimeter', 'centimeter'
 
         pS.AddParameter3('deluncompiled', const.siBool, config['deluncompiled'], '', 0, 0)
-
+        pS.AddParameter3('debugdump', const.siBool, config['debugdump'], '', 0, 0)
         pS.AddParameter3('batch', const.siBool, config['batch'], '', 0, 0)
+        pS.AddParameter3('verbose', const.siInt4, config['verbose'], 0, 2, 0, 0)
     except KeyError:
         crycore.default_settings(xsi)
         xsi.SoftCryExport()
@@ -123,7 +129,9 @@ def SoftCryExport_Execute():
     text = mLay.AddStaticText
     grp = mLay.AddGroup
     egrp = mLay.EndGroup
+    tab = mLay.AddTab
 
+    tab('Export')
     path_ctrl = item('path', 'File', const.siControlFilePath)
     path_ctrl.SetAttribute(const.siUINoLabel, 1)
     path_ctrl.SetAttribute(const.siUIFileFilter, 'File (*.dae)|*.dae')
@@ -144,7 +152,7 @@ def SoftCryExport_Execute():
     erow()
     egrp()
 
-    grp('In Game', 1)
+    grp('Compile', 1)
     row()
     item('donotmerge', 'Do Not Merge')
     item('customnormals', 'Custom Normals')
@@ -159,10 +167,18 @@ def SoftCryExport_Execute():
     btn('Export', 'Export')
     erow()
 
+    tab('Special Settings')
+    grp('Settings', 1)
+    row()
+    item('debugdump', 'Debug Dump CGF')
+    item('verbose', 'Verbose Level')
+    erow()
+    egrp
+
     desk = xsi.Desktop.ActiveLayout
     view = desk.CreateView('Property Panel', 'SoftCryExport')
     view.BeginEdit()
-    view.Resize(400, 190)
+    view.Resize(400, 210)
     view.SetAttributeValue('targetcontent', pS.FullName)
     view.EndEdit()
     return True
@@ -331,4 +347,84 @@ def SoftCryShowLog_Init(in_ctxt):
 def SoftCryShowLog_Execute():
     import webbrowser
     webbrowser.open(get_origin() + 'export.log')
+    return True
+
+
+def SoftCryShowRCLog_Init(in_ctxt):
+    oCmd = in_ctxt.Source
+    oCmd.Description = ''
+    oCmd.ReturnValue = True
+    return True
+
+
+def SoftCryShowRCLog_Execute():
+    add_to_path()
+    import webbrowser
+    import os
+    import crycore
+    reload(crycore)
+    config = crycore.load_settings(xsi)
+    logpath = os.path.join(config['rcpath'], 'rc_log.log')
+    if os.path.isfile(logpath):
+        webbrowser.open(logpath)
+    return True
+
+
+def SoftCryTools_Init(in_ctxt):
+    oCmd = in_ctxt.Source
+    oCmd.Description = ''
+    oCmd.ReturnValue = True
+    return True
+
+
+def SoftCryTools_Execute():
+    for prop in xsi.ActiveSceneRoot.Properties:
+        if prop.Name == 'SoftCryToolsProp':
+            xsi.DeleteObj('SoftCryToolsProp')
+    pS = xsi.ActiveSceneRoot.AddProperty('CustomProperty', False, 'SoftCryToolsProp')
+    txt = pS.AddParameter3('degeneratetxt', const.siString, '', '', 0, 0)
+    txt.ReadOnly = True
+    txt = pS.AddParameter3('degeneratetxtuv', const.siString, '', '', 0, 0)
+    txt.ReadOnly = True
+
+    mLay = pS.PPGLayout
+    mLay.SetAttribute(const.siUILogicFile, get_origin() + '\\Application\\Logic\\tools.py')
+    mLay.Language = 'pythonscript'
+
+    g = mLay.AddGroup
+    eg = mLay.Endgroup
+    btn = mLay.AddButton
+    item = mLay.AddItem
+    row = mLay.AddRow
+    erow = mLay.EndRow
+    enum = mLay.AddEnumControl
+    text = mLay.AddStaticText
+
+    g('Tools', 1)
+
+    row()
+
+    degtext = item('degeneratetxt')
+    degtext.SetAttribute('NoLabel', True)
+    btn('finddegenerates', 'Find Degenerate Polies')
+
+    erow()
+
+    '''row()
+
+    btn('degenerateuvs', 'Degenerate UVs')
+
+    degtext = item('degeneratetxtuv')
+    degtext.SetAttribute('NoLabel', True)
+
+    erow()
+
+    eg()'''
+
+    desk = xsi.Desktop.ActiveLayout
+    view = desk.CreateView('Property Panel', 'SoftCryTools')
+    view.BeginEdit()
+    view.Resize(300, 290)
+    view.SetAttributeValue('targetcontent', pS.FullName)
+    view.EndEdit()
     return True

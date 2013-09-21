@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import andesicore
 import crydaemon
 reload(crydaemon)
@@ -35,6 +36,7 @@ class MaterialConverter(andesicore.SIMaterial):
         self.crymat.ports['normal'] = self.get_normal()
         self.crymat.old_name = self.simat.Name
         self.crymat.name = '{0}__{1}__{2}__{3}'.format(self.libname, self.index, self.simat.Name, self.crymat.phys)
+        self.crymat.effect_name = '{0}-{1}-{2}-effect'.format(self.libname, self.index, self.simat.Name)
         return self.crymat
 
     def get_port(self, port_name):
@@ -268,9 +270,15 @@ class Export(andesicore.SIGeneral):
         ed.prepare_for_rc()
         logging.info('Finished .DAE preparation.')
         exepath = os.path.join(self.config['rcpath'], 'rc.exe')
-        logging.info('Calling Resource Compiler with "{0} {1}"'.format(exepath, self.get_fixed_path()))
+
+        command_line = [exepath, self.get_fixed_path()]
+        if self.config['debugdump']:
+            command_line.append('/debugdump')
+        command_line.append('/verbose={0}'.format(self.config['verbose']))
+
+        logging.info('Calling Resource Compiler with "{0}"'.format(' '.join(command_line)))
         try:
-            p = subprocess.Popen((exepath, '{0}'.format(self.get_fixed_path())), stdout=subprocess.PIPE)
+            p = subprocess.Popen(command_line, stdout=subprocess.PIPE)
         except WindowsError:
             logging.exception('')
             self.msg('Make sure your RC path is correct.', plugin='SoftCry')

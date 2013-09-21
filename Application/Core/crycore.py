@@ -25,6 +25,8 @@ def default_settings(xsi):
         'unit': 'meter',  # meter | centimeter
         'batch': False,
         'deluncompiled': True,
+        'debugdump': False,
+        'verbose': 0,
     }
     path = os.path.join(xsi.InstallationPath(const.siUserAddonPath), 'SoftCry', 'Resources', 'settings')
     with open(path, 'w') as fh:
@@ -41,5 +43,7 @@ def get_default_settings():
         'unit': 'meter',  # meter | centimeter
         'batch': False,
         'deluncompiled': True,
+        'debugdump': False,
+        'verbose': 0,
     }
     return sett
