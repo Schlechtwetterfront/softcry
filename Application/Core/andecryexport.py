@@ -95,19 +95,37 @@ class Export(andesicore.SIGeneral):
     def __init__(self, xsi, config):
         self.xsi = xsi
         self.config = config
-        logpath = os.path.join(self.xsi.InstallationPath(const.siUserAddonPath), 'SoftCry', 'export.log')
+        self.temppath = self.get_origin() + 'Resources\\Temp\\'
+        if not os.path.isdir(self.temppath):
+            os.mkdir(self.temppath)
+        self.dest_folder = '\\'.join(self.config['path'].split('\\')[:-1])
+        self.file_name = self.config['path'].split('\\')[-1].replace('.dae', '')
+        logpath = os.path.join(self.get_origin(), 'export.log')
         logging.basicConfig(format='%(levelname)s (%(lineno)d, %(funcName)s): %(message)s',
                             filename=logpath,
                             filemode='w',
                             level=logging.DEBUG)
-        self.config['path'] = self.get_fixed_path()
+        self.config['path'] = self.create_fixed_path(self.file_name)
 
-    def create_options(self):
+    def get_origin(self):
+        orig_path = ''
+        plugins = self.xsi.Plugins
+        for p in plugins:
+            #print p.Name
+            if p.Name == 'SoftCry':
+                orig_path = p.OriginPath[:-20]
+        return orig_path
+
+    def create_fixed_path(self, filename):
+        path = os.path.join(self.temppath, filename + '.dae')
+        return path
+
+    def create_options(self, path):
         for prop in self.xsi.ActiveSceneRoot.Properties:
             if prop.Name == 'SCCrosswalkOptions':
                 self.xsi.DeleteObj('SCCrosswalkOptions')
         options = self.xsi.ActiveSceneRoot.AddProperty('CustomProperty', False, 'SCCrosswalkOptions')
-        options.AddParameter3('FileName', const.siString, self.get_fixed_path())
+        options.AddParameter3('FileName', const.siString, path)
         options.AddParameter3('Format', const.siInt4, 1)  # 1 = Collada file.
         options.AddParameter3('Format1', const.siInt4, 0)
         options.AddParameter3('Verbose', const.siBool, True)  # log to console.
@@ -194,7 +212,7 @@ class Export(andesicore.SIGeneral):
         if self.config['filetype'] == 'matlib':
             matmanager = crydaemon.CryMaterialManager()
             self.retrieve_materials(matmanager)
-            self.do_material_export(matmanager)
+            self.do_material_export(matmanager, self.create_fixed_path(self.file_name))
             logging.info('Finished material export.')
             return
 
@@ -209,9 +227,8 @@ class Export(andesicore.SIGeneral):
                 matmanager = crydaemon.CryMaterialManager()
                 self.retrieve_materials(matmanager)
                 self.retrieve_clips()
-                newpath = self.config['path'].split('\\')
-                newpath[-1] = '{0}.dae'.format(root.Name)
-                self.do_export(matmanager, '\\'.join(newpath))
+                path = self.create_fixed_path(root.Name)
+                self.do_export(matmanager, path)
             self.xsi.Selection.Clear()
             self.xsi.Selection.Add(self.selection)
             logging.info('Finished export.')
@@ -234,44 +251,39 @@ class Export(andesicore.SIGeneral):
         matmanager = crydaemon.CryMaterialManager()
         self.retrieve_materials(matmanager)
         self.retrieve_clips()
-        self.do_export(matmanager)
+        self.do_export(matmanager, self.create_fixed_path(self.file_name))
         logging.info('Finished export.')
-        #logging.shutdown()
+        logging.shutdown()
 
-    def do_material_export(self, matman):
+    def do_material_export(self, matman, path):
+        print path
         libname = self.xsi.ActiveProject.ActiveScene.ActiveMaterialLibrary.Name
         writer = crydaemon.ColladaWriter()
         writer.material_manager = matman
         writer.material_lib_name = libname
         logging.info('Starting only-material collada writing.')
-        writer.write_materials(self.config['path'])
+        writer.write_materials(path)
         logging.info('Finished writing Collada file to {0}.'.format(self.get_fixed_path()))
         exepath = os.path.join(self.config['rcpath'], 'rc.exe')
         logging.info('Calling Resource Compiler with "{0} {1} /createmtl=1"'.format(exepath, self.get_fixed_path()))
-        p = subprocess.Popen((exepath, '{0}'.format(self.get_fixed_path()), '/createmtl=1'), stdout=subprocess.PIPE)
+        p = subprocess.Popen((exepath, '{0}'.format(path), '/createmtl=1'), stdout=subprocess.PIPE)
         logging.info(p.communicate()[0])
+        if self.config['deluncompiled']:
+            os.remove(path)
 
-    def get_fixed_path(self):
-        path = self.config['path']
-        print path
-        if not path.endswith('.dae'):
-            return '{0}.dae'.format(path)
-        else:
-            return path
-
-    def do_export(self, matman, path=None):
-        self.create_options()
+    def do_export(self, matman, path):
+        self.create_options(path)
         logging.info('Starting Crosswalk COLLADA export.')
         self.xsi.ExportCrosswalk('SCCrosswalkOptions')
         logging.info('Finished Crosswalk COLLADA export.')
         logging.info('Starting .DAE preparation.')
-        self.config['scenename'] = os.path.basename(path or self.get_fixed_path())[:-4]
+        self.config['scenename'] = os.path.basename(path)[:-4]
         ed = crydaemon.ColladaEditor(self.config, materialman=matman, clips=self.clips)
         ed.prepare_for_rc()
         logging.info('Finished .DAE preparation.')
         exepath = os.path.join(self.config['rcpath'], 'rc.exe')
 
-        command_line = [exepath, self.get_fixed_path()]
+        command_line = [exepath, path]
         if self.config['debugdump']:
             command_line.append('/debugdump')
         command_line.append('/verbose={0}'.format(self.config['verbose']))
@@ -285,4 +297,15 @@ class Export(andesicore.SIGeneral):
             raise SystemExit
         logging.info(p.communicate()[0])
         if self.config['deluncompiled']:
-            os.remove(self.get_fixed_path())
+            os.remove(path)
+        self.copy_temp_files()
+
+    def copy_temp_files(self):
+        import shutil
+        for item in os.listdir(self.temppath):
+            if item.endswith('.dae') or item.endswith('.rcdone'):
+                continue
+            possible_file = os.path.join(self.dest_folder, os.path.basename(item))
+            if os.path.isfile(possible_file):
+                os.remove(possible_file)
+            shutil.move(os.path.join(self.temppath, item), self.dest_folder)
