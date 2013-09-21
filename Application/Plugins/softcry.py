@@ -387,6 +387,9 @@ def SoftCryTools_Execute():
     txt = pS.AddParameter3('degeneratetxtuv', const.siString, '', '', 0, 0)
     txt.ReadOnly = True
 
+    pS.AddParameter3('phystypes', const.siString, 'physDefault')
+
+
     mLay = pS.PPGLayout
     mLay.SetAttribute(const.siUILogicFile, get_origin() + '\\Application\\Logic\\tools.py')
     mLay.Language = 'pythonscript'
@@ -400,13 +403,31 @@ def SoftCryTools_Execute():
     enum = mLay.AddEnumControl
     text = mLay.AddStaticText
 
-    g('Tools', 1)
+    g('Geometry Tools', 1)
 
     row()
 
     degtext = item('degeneratetxt')
     degtext.SetAttribute('NoLabel', True)
-    btn('finddegenerates', 'Find Degenerate Polies')
+    btn('finddegenerates', 'Find Degenerate Faces')
+
+    erow()
+
+    eg()
+
+    g('Material Tools', 1)
+
+    row()
+
+    mat_phys_special = []
+    for item in MATERIAL_PHYS:
+        mat_phys_special.extend((item, item))
+    enum_ctrl = enum('phystypes', mat_phys_special, 'Physicalization', const.siControlCombo)
+    enum_ctrl.SetAttribute('NoLabel', True)
+    
+    physbtn = btn('setphys', 'Set For Selected')
+    physbtn.SetAttribute(const.siUICX, 105)
+    btn('helpsetphys', '?')
 
     erow()
 
@@ -417,14 +438,14 @@ def SoftCryTools_Execute():
     degtext = item('degeneratetxtuv')
     degtext.SetAttribute('NoLabel', True)
 
-    erow()
+    erow()'''
 
-    eg()'''
+    eg()
 
     desk = xsi.Desktop.ActiveLayout
     view = desk.CreateView('Property Panel', 'SoftCryTools')
     view.BeginEdit()
-    view.Resize(300, 290)
+    view.Resize(300, 130)
     view.SetAttributeValue('targetcontent', pS.FullName)
     view.EndEdit()
     return True
