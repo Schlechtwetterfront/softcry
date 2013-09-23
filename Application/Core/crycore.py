@@ -27,6 +27,7 @@ def default_settings(xsi):
         'deluncompiled': True,
         'debugdump': False,
         'verbose': 0,
+        'addmaterial': False,
     }
     path = os.path.join(xsi.InstallationPath(const.siUserAddonPath), 'SoftCry', 'Resources', 'settings')
     with open(path, 'w') as fh:
@@ -45,5 +46,6 @@ def get_default_settings():
         'deluncompiled': True,
         'debugdump': False,
         'verbose': 0,
+        'addmaterial': False,
     }
     return sett

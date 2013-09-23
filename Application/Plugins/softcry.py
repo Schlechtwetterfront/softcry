@@ -112,6 +112,7 @@ def SoftCryExport_Execute():
         pS.AddParameter3('debugdump', const.siBool, config['debugdump'], '', 0, 0)
         pS.AddParameter3('batch', const.siBool, config['batch'], '', 0, 0)
         pS.AddParameter3('verbose', const.siInt4, config['verbose'], 0, 2, 0, 0)
+        pS.AddParameter3('addmaterial', const.siBool, config['addmaterial'], '', 0, 0)
     except KeyError:
         crycore.default_settings(xsi)
         xsi.SoftCryExport()
@@ -130,6 +131,7 @@ def SoftCryExport_Execute():
     grp = mLay.AddGroup
     egrp = mLay.EndGroup
     tab = mLay.AddTab
+    spacer = mLay.AddSpacer
 
     tab('Export')
     path_ctrl = item('path', 'File', const.siControlFilePath)
@@ -142,30 +144,48 @@ def SoftCryExport_Execute():
     texPathI.SetAttribute(const.siUINoLabel, 1)
     texPathI.SetAttribute(const.siUIWidthPercentage, 55)
 
-    grp('Export', 1)
+    grp('', 0)
     row()
+
+    exgrp = grp('Export', 1)
+    exgrp.SetAttribute(const.siUIWidthPercentage, 50)
+    #row()
     item('deluncompiled', 'Delete Uncompiled')
     item('batch', 'Batch Export')
     item('onlymaterials', 'Only Materials')
     unit = enum('unit', units, 'Unit', const.siControlCombo)
     unit.SetAttribute('NoLabel', True)
-    erow()
+    item('addmaterial', 'Non-destructive')
+    #erow()
     egrp()
 
-    grp('Compile', 1)
-    row()
+
+    cgrp = grp('Compile', 1)
+    cgrp.SetAttribute(const.siUIWidthPercentage, 50)
+    #row()
+    text('')
     item('donotmerge', 'Do Not Merge')
     item('customnormals', 'Custom Normals')
     filetype = enum('filetype', file_types, 'File Type', const.siControlCombo)
     filetype.SetAttribute('NoLabel', True)
-    erow()
+    #erow()
     egrp()
 
-    row()
+
+    grp('', 0)
     text('')
-    btn('help', 'Help')
-    btn('Export', 'Export')
+    text('')
+    text('')
+    #row()
+    b = btn('help', 'Help')
+    b.SetAttribute(const.siUICX, 80)
+    b = btn('Export', 'Export')
+    b.SetAttribute(const.siUICX, 80)
+    #erow()
+    egrp()
+
     erow()
+    egrp()
 
     tab('Special Settings')
     grp('Settings', 1)
@@ -173,12 +193,12 @@ def SoftCryExport_Execute():
     item('debugdump', 'Debug Dump CGF')
     item('verbose', 'Verbose Level')
     erow()
-    egrp
+    egrp()
 
     desk = xsi.Desktop.ActiveLayout
     view = desk.CreateView('Property Panel', 'SoftCryExport')
     view.BeginEdit()
-    view.Resize(400, 210)
+    view.Resize(400, 207)
     view.SetAttributeValue('targetcontent', pS.FullName)
     view.EndEdit()
     return True
@@ -402,8 +422,9 @@ def SoftCryTools_Execute():
     erow = mLay.EndRow
     enum = mLay.AddEnumControl
     text = mLay.AddStaticText
+    spacer = mLay.AddSpacer
 
-    g('Geometry Tools', 1)
+    g('Geometry', 1)
 
     row()
 
@@ -415,7 +436,7 @@ def SoftCryTools_Execute():
 
     eg()
 
-    g('Material Tools', 1)
+    g('Materials', 1)
 
     row()
 
@@ -427,9 +448,25 @@ def SoftCryTools_Execute():
     
     physbtn = btn('setphys', 'Set For Selected')
     physbtn.SetAttribute(const.siUICX, 105)
+    spacer(0, 1)
     btn('helpsetphys', '?')
 
     erow()
+
+    eg()
+
+    g('Vertex Colors', 1)
+
+    row()
+    b = btn('showrgb', 'Show RGB')
+    b.SetAttribute(const.siUICX, 80)
+    b = btn('showalpha', 'Show Alpha')
+    b.SetAttribute(const.siUICX, 80)
+    spacer(0, 1)
+    btn('helpvc', '?')
+    erow()
+
+    eg()
 
     '''row()
 
@@ -440,12 +477,10 @@ def SoftCryTools_Execute():
 
     erow()'''
 
-    eg()
-
     desk = xsi.Desktop.ActiveLayout
     view = desk.CreateView('Property Panel', 'SoftCryTools')
     view.BeginEdit()
-    view.Resize(300, 130)
+    view.Resize(300, 170)
     view.SetAttributeValue('targetcontent', pS.FullName)
     view.EndEdit()
     return True
