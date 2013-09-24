@@ -263,9 +263,9 @@ class Export(andesicore.SIGeneral):
         writer.material_lib_name = libname
         logging.info('Starting only-material collada writing.')
         writer.write_materials(path)
-        logging.info('Finished writing Collada file to {0}.'.format(self.get_fixed_path()))
+        logging.info('Finished writing Collada file to {0}.'.format(self.path))
         exepath = os.path.join(self.config['rcpath'], 'rc.exe')
-        logging.info('Calling Resource Compiler with "{0} {1} /createmtl=1"'.format(exepath, self.get_fixed_path()))
+        logging.info('Calling Resource Compiler with "{0} {1} /createmtl=1"'.format(exepath, self.path))
         p = subprocess.Popen((exepath, '{0}'.format(path), '/createmtl=1'), stdout=subprocess.PIPE)
         logging.info(p.communicate()[0])
         if self.config['deluncompiled']:
