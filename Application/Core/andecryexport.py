@@ -270,6 +270,7 @@ class Export(andesicore.SIGeneral):
         logging.info(p.communicate()[0])
         if self.config['deluncompiled']:
             os.remove(path)
+        self.copy_temp_files()
 
     def do_export(self, matman, path):
         self.create_options(path)
