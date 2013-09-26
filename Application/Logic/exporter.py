@@ -19,8 +19,6 @@ def Export_OnClicked():
     config['debugdump'] = params('debugdump').Value
     config['verbose'] = params('verbose').Value
     config['addmaterial'] = params('addmaterial').Value
-    config['matlib'] = params('matlib').Value
-    config['usematlib'] = params('usematlib').Value
     crycore.save_settings(xsi, config)
     export = andecryexport.Export(xsi, config)
     try:

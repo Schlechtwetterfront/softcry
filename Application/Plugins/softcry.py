@@ -1,7 +1,8 @@
 # Code Copyright (C) Ande 2012
 import win32com.client
 from win32com.client import constants as const
-import sys
+import sys, os
+from datetime import datetime as dt
 
 xsi = Application
 uitk = XSIUIToolkit
@@ -35,6 +36,29 @@ def get_origin():
     return orig_path
 
 
+def check_version(quiet=False):
+    add_to_path()
+    from datetime import datetime as dt
+    import requests as req
+    import webbrowser
+    for p in xsi.Plugins:
+        if p.Name == 'SoftCry':
+            origin = p.OriginPath
+            verdir = os.path.abspath(os.path.join(origin, '..', '..', 'softcry.ver'))
+            with open(verdir, 'r') as fh:
+                local_major, local_minor, local_build = fh.readline().split('.')
+    latest = req.get('https://raw.github.com/Schlechtwetterfront/softcry/master/softcry.ver')
+    major, minor, build = latest.text.split('.')
+    if build > local_build:
+        if uitk.MsgBox('''You are using an old version of SoftCry ({0}.{1}.{2}), please update to the latest ({3}.{4}.{5}).
+Go to SoftCry download page?'''.format(local_major, local_minor, local_build, major, minor, build), 4) == 6:
+            webbrowser.open('https://github.com/Schlechtwetterfront/softcry')
+    else:
+        if quiet:
+            return
+        uitk.MsgBox('Build up to date (local: {0}.{1}.{2}, remote: {3}.{4}.{5}).'.format(local_major,
+                local_minor, local_build, major, minor, build))
+
 
 
 def XSILoadPlugin(in_reg):
@@ -52,9 +76,10 @@ def XSILoadPlugin(in_reg):
     in_reg.RegisterCommand('SoftCryShowLog', 'SoftCryShowLog')
     in_reg.RegisterCommand('SoftCryShowRCLog', 'SoftCryShowRCLog')
     in_reg.RegisterCommand('SoftCryTools', 'SoftCryTools')
+    in_reg.RegisterCommand('SoftCryCheckVersion', 'SoftCryCheckVersion')
 
     
-    in_reg.RegisterEven('SoftCryStartupEvent', const.siOnStartup)
+    in_reg.RegisterEvent('SoftCryStartupEvent', const.siOnStartup)
     in_reg.RegisterTimerEvent('SoftCryDelayedStartupEvent', 0, 1000)
     eventtimer = xsi.EventInfos('SoftCryDelayedStartupEvent')
     eventtimer.Mute = True
@@ -79,22 +104,8 @@ def SoftCryStartupEvent_OnEvent(in_ctxt):
 
 
 def SoftCryDelayedStartupEvent_OnEvent(in_ctxt):
-    add_to_path()
-    from datetime import datetime as dt
-    import requests as req
-    import webbrowser
-    for p in xsi.Plugins:
-        if p.Name == 'SoftCry':
-            origin = p.OriginPath
-            verdir = os.path.abspath(os.path.join(origin, '..', '..', 'softcry.ver'))
-            with open(verdir, 'r') as fh:
-                local_major, local_minor, local_build = fh.readline().split('.')
-    latest = req.get('https://raw.github.com/Schlechtwetterfront/softcry/master/softcry.ver')
-    major, minor, build = latest.text.split('.')
-    if build > local_build:
-        if uitk.MsgBox('''You are using an old version of SoftCry ({0}.{1}.{2}), please update to the latest ({3}.{4}.{5}).
-Go to SoftCry download page?''', 4) == 6:
-            webbrowser.open('https://github.com/Schlechtwetterfront/softcry')
+    check_version(True)
+    return False
 
 
 # Menu
@@ -104,9 +115,10 @@ def SoftCry_Init(in_ctxt):
     oMenu.AddCommandItem('Edit Clips...', 'SoftCryEditAnimClips')
     oMenu.AddCommandItem('Cryify Materials', 'SoftCryCryifyMaterials')
     oMenu.AddCommandItem('Toolbox...', 'SoftCryTools')
-    sub_menu = win32com.client.Dispatch(oMenu.AddItem('Logs', const.siMenuItemSubmenu))
+    sub_menu = win32com.client.Dispatch(oMenu.AddItem('Misc', const.siMenuItemSubmenu))
     sub_menu.AddCommandItem('Show Export Log', 'SoftCryShowLog')
     sub_menu.AddCommandItem('Show RC Log', 'SoftCryShowRCLog')
+    sub_menu.AddCommandItem('Check Version', 'SoftCryCheckVersion')
     return True
 
 
@@ -144,8 +156,7 @@ def SoftCryExport_Execute():
         pS.AddParameter3('verbose', const.siInt4, config['verbose'], 0, 2, 0, 0)
         pS.AddParameter3('addmaterial', const.siBool, config['addmaterial'], '', 0, 0)
 
-        pS.AddParameter3('matlib', const.siString, config['matlib'], '', 0, 0)
-        pS.AddParameter3('usematlib', const.siBool, config['usematlib'], '', 0, 0)
+        pS.AddParameter3('matlib', const.siString, '')
     except KeyError:
         crycore.default_settings(xsi)
         xsi.SoftCryExport()
@@ -225,13 +236,6 @@ def SoftCryExport_Execute():
     row()
     item('debugdump', 'Debug Dump CGF')
     item('verbose', 'Verbose Level')
-    erow()
-    egrp()
-
-    grp('Material Lib', 1)
-    row()
-    item('usematlib', 'Override MatLib')
-    item('matlib', 'MatLib')
     erow()
     egrp()
 
@@ -446,8 +450,12 @@ def SoftCryTools_Execute():
     txt.ReadOnly = True
     txt = pS.AddParameter3('degeneratetxtuv', const.siString, '', '', 0, 0)
     txt.ReadOnly = True
+    pS.AddParameter3('mtlpath', const.siString, '', '', 0, 0)
+    pS.AddParameter3('addmtl', const.siBool, True, '', 0, 0)
 
     pS.AddParameter3('phystypes', const.siString, 'physDefault')
+
+    pS.AddParameter3('matlib', const.siString, '')
 
 
     mLay = pS.PPGLayout
@@ -464,32 +472,61 @@ def SoftCryTools_Execute():
     text = mLay.AddStaticText
     spacer = mLay.AddSpacer
 
+    row()
+
+    matg = g('Materials', 1)
+    matg.SetAttribute(const.siUIWidthPercentage, 60)
+
+    row()
+    mat_phys_special = []
+    for phys_type in MATERIAL_PHYS:
+        mat_phys_special.extend((phys_type, phys_type))
+    enum_ctrl = enum('phystypes', mat_phys_special, 'Physicalization', const.siControlCombo)
+    enum_ctrl.SetAttribute('NoLabel', True)
+    
+    physbtn = btn('setphys', 'Set For Selected')
+    #physbtn.SetAttribute(const.siUICX, 105)
+    #spacer(0, 1)
+    #btn('helpsetphys', '?')
+    erow()
+
+    spacer(100, 5)
+
+    row()
+
+    path_ctrl = item('mtlpath', 'File', const.siControlFilePath)
+    path_ctrl.SetAttribute(const.siUINoLabel, 1)
+    path_ctrl.SetAttribute(const.siUIFileFilter, 'File (*.mtl)|*.mtl')
+    path_ctrl.SetAttribute(const.siUIOpenFile, True)
+    path_ctrl.SetAttribute(const.siUIFileMustExist, True)
+
+    syncb = btn('sync',  'Sync MatLib')
+    syncb.SetAttribute(const.siUIButtonDisable, True)
+    #btn('syncmtlhelp', '?')
+    erow()
+
+    spacer(100, 5)
+
+    row()
+    matlibs = []
+    for material in xsi.ActiveProject.ActiveScene.MaterialLibraries:
+        matlibs.extend((material.Name, material.FullName))
+    filetype = enum('matlib', matlibs, 'Material Library', const.siControlCombo)
+    filetype.SetAttribute('NoLabel', True)
+    btn('setmatlib', 'Set Active MatLib')
+    erow()
+
+    eg()
+
+    g('', 0)
+
     g('Geometry', 1)
 
     row()
 
     degtext = item('degeneratetxt')
     degtext.SetAttribute('NoLabel', True)
-    btn('finddegenerates', 'Find Degenerate Faces')
-
-    erow()
-
-    eg()
-
-    g('Materials', 1)
-
-    row()
-
-    mat_phys_special = []
-    for item in MATERIAL_PHYS:
-        mat_phys_special.extend((item, item))
-    enum_ctrl = enum('phystypes', mat_phys_special, 'Physicalization', const.siControlCombo)
-    enum_ctrl.SetAttribute('NoLabel', True)
-    
-    physbtn = btn('setphys', 'Set For Selected')
-    physbtn.SetAttribute(const.siUICX, 105)
-    spacer(0, 1)
-    btn('helpsetphys', '?')
+    btn('finddegenerates', 'Find Degenerates')
 
     erow()
 
@@ -499,14 +536,18 @@ def SoftCryTools_Execute():
 
     row()
     b = btn('showrgb', 'Show RGB')
-    b.SetAttribute(const.siUICX, 80)
+    b.SetAttribute(const.siUICX, 70)
     b = btn('showalpha', 'Show Alpha')
-    b.SetAttribute(const.siUICX, 80)
-    spacer(0, 1)
+    b.SetAttribute(const.siUICX, 70)
+    spacer(40, 1)
     btn('helpvc', '?')
     erow()
 
     eg()
+
+    eg()
+
+    erow()
 
     '''row()
 
@@ -520,7 +561,19 @@ def SoftCryTools_Execute():
     desk = xsi.Desktop.ActiveLayout
     view = desk.CreateView('Property Panel', 'SoftCryTools')
     view.BeginEdit()
-    view.Resize(300, 170)
+    view.Resize(500, 135)
     view.SetAttributeValue('targetcontent', pS.FullName)
     view.EndEdit()
+    return True
+
+
+def SoftCryCheckVersion_Init(in_ctxt):
+    oCmd = in_ctxt.Source
+    oCmd.Description = ''
+    oCmd.ReturnValue = True
+    return True
+
+
+def SoftCryCheckVersion_Execute():
+    check_version()
     return True

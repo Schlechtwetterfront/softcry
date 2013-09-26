@@ -28,8 +28,6 @@ def default_settings(xsi):
         'debugdump': False,
         'verbose': 0,
         'addmaterial': False,
-        'matlib': '',
-        'usematlib': False,
     }
     path = os.path.join(xsi.InstallationPath(const.siUserAddonPath), 'SoftCry', 'Resources', 'settings')
     with open(path, 'w') as fh:
@@ -49,7 +47,5 @@ def get_default_settings():
         'debugdump': False,
         'verbose': 0,
         'addmaterial': False,
-        'matlib': '',
-        'usematlib': False,
     }
     return sett

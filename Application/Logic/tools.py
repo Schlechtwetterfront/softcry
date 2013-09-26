@@ -3,6 +3,21 @@ ui = XSIUIToolkit
 import andesicore
 sigen = andesicore.SIGeneral()
 
+
+class SyncMaterial(object):
+    name = ''
+    diffuse = 1, 1, 1
+    specular = 1, 1, 1
+    emissive = 0, 0, 0
+    shininess = 255
+    opacity = 1
+    textures = dict()
+
+    def color(self, string):
+        r, g, b = string.split(',')
+        return float(r), float(g), float(b)
+
+
 # Determinant of matrix a.
 def det(a):
     return a[0][0]*a[1][1]*a[2][2] + a[0][1]*a[1][2]*a[2][0] + a[0][2]*a[1][0]*a[2][1] - a[0][2]*a[1][1]*a[2][0] - a[0][1]*a[1][0]*a[2][2] - a[0][0]*a[1][2]*a[2][1]
@@ -161,3 +176,66 @@ def showalpha_OnClicked():
 
 def helpvc_OnClicked():
     sigen.msg('Will set the Vertex Color display mode for the focused viewport to either RGB or Alpha.', plugin='SoftCry')
+
+
+def syncmathelp_OnClicked():
+    sigen.msg('Sync the selected .mtl multi material with the current Material Library.')
+
+def sync_OnClicked():
+    from xml.etree.ElementTree import ElementTree, SubElement, Element
+    ppg = PPG.Inspected(0)
+    path = ppg.Parameters('mtlpath').Value
+    if not path:
+        return
+    tree = ElementTree(file=path)
+    materials = []
+    for material in tree.getroot().find('SubMaterials'):
+        mat = SyncMaterial()
+        mat.name = material.get('Name')
+        print mat.name
+        mat.diffuse = mat.color(material.get('Diffuse'))
+        mat.specular = mat.color(material.get('Specular'))
+        mat.emissive = mat.color(material.get('Emissive'))
+        mat.shininess = float(material.get('Shininess'))
+        mat.opacity = float(material.get('Opacity'))
+        for tex in material.find('Textures'):
+            mat.textures[tex.get('Map')] = tex.get('File')
+        materials.append(mat)
+    lib = xsi.ActiveProject.ActiveScene.ActiveMaterialLibrary
+    for simat in lib.Items:
+        for mat in materials:
+            print mat.name, simat.Name
+            if mat.name == simat.Name:
+                shader = simat.Shaders(0)
+                color = shader.Parameters('diffuse').Value
+                color.Red = mat.diffuse[0]
+                color.Green = mat.diffuse[1]
+                color.Blue = mat.diffuse[2]
+
+                color = shader.Parameters('specular').Value
+                color.Red = mat.specular[0]
+                color.Green = mat.specular[1]
+                color.Blue = mat.specular[2]
+
+                color = shader.Parameters('reflectivity').Value
+                color.Red = mat.emissive[0]
+                color.Green = mat.emissive[1]
+                color.Blue = mat.emissive[2]
+
+                shader.Parameters('shiny').Value = mat.shininess / 255
+
+                color = shader.Parameters('transparency').Value
+                color.Red = mat.opacity
+                color.Green = mat.opacity
+                color.Blue = mat.opacity
+                color.Alpha = mat.opacity
+
+                # Textures
+
+
+def setmatlib_OnClicked():
+    ppg = PPG.Inspected(0)
+    lib = ppg.Parameters('matlib').Value
+    if not lib:
+        return
+    xsi.SetCurrentMaterialLibrary(lib)
