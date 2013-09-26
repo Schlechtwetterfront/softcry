@@ -18,16 +18,18 @@ def save_settings(xsi, settings):
 def default_settings(xsi):
     sett = {
         'donotmerge': True,
-        'path': 'E:\\AndeSoft\\Projects\\CE\\File\\softtest.dae',
+        'path': 'C:\\Users\\administrator\\Documents\\CE_353\\GameSDK\\Objects\\xxx.dae',
         'customnormals': True,
         'filetype': 'cgf',  # cgf | cgaanm | chrcaf | matlib
-        'rcpath': 'E:\\AndeSoft\\CE_343\\Bin32\\rc',
+        'rcpath': 'C:\\Users\\administrator\\Documents\\CE_353\\bin32\\rc\\',
         'unit': 'meter',  # meter | centimeter
         'batch': False,
         'deluncompiled': True,
         'debugdump': False,
         'verbose': 0,
         'addmaterial': False,
+        'matlib': '',
+        'usematlib': False,
     }
     path = os.path.join(xsi.InstallationPath(const.siUserAddonPath), 'SoftCry', 'Resources', 'settings')
     with open(path, 'w') as fh:
@@ -37,15 +39,17 @@ def default_settings(xsi):
 def get_default_settings():
     sett = {
         'donotmerge': True,
-        'path': 'E:\\AndeSoft\\Projects\\CE\\File\\softtest.dae',
+        'path': 'C:\\Users\\administrator\\Documents\\CE_353\\GameSDK\\Objects\\xxx.dae',
         'customnormals': True,
         'filetype': 'cgf',  # cgf | cgaanm | chrcaf
-        'rcpath': 'E:\\AndeSoft\\CE_343\\Bin32\\rc',
+        'rcpath': 'C:\\Users\\administrator\\Documents\\CE_353\\bin32\\rc\\',
         'unit': 'meter',  # meter | centimeter
         'batch': False,
         'deluncompiled': True,
         'debugdump': False,
         'verbose': 0,
         'addmaterial': False,
+        'matlib': '',
+        'usematlib': False,
     }
     return sett

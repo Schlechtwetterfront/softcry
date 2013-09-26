@@ -135,7 +135,7 @@ class Export(andesicore.SIGeneral):
         options.AddParameter3('ExportGeometries', const.siBool, True)
         options.AddParameter3('ExportImageClips', const.siBool, True)  # not sure about that.
         options.AddParameter3('ExportUsedMaterialsAndImagesOnly', const.siBool, True)  # not sure either.
-        options.AddParameter3('ExportAnimation', const.siBool, True)  # for now disabled.
+        options.AddParameter3('ExportAnimation', const.siBool, True)
         options.AddParameter3('ApplySubdivisionToGeometry', const.siBool, False)  # nope.
         options.AddParameter3('Triangulate', const.siBool, True)  # sure.
         options.AddParameter3('ExportTangentsAsVtxColor', const.siBool, False)  # nope.
@@ -304,6 +304,7 @@ class Export(andesicore.SIGeneral):
     def copy_temp_files(self):
         import shutil
         for item in os.listdir(self.temppath):
+            print item
             if item.endswith('.dae') or item.endswith('.rcdone'):
                 continue
             possible_file = os.path.join(self.dest_folder, os.path.basename(item))

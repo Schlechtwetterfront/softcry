@@ -54,6 +54,11 @@ def XSILoadPlugin(in_reg):
     in_reg.RegisterCommand('SoftCryTools', 'SoftCryTools')
 
     
+    in_reg.RegisterEven('SoftCryStartupEvent', const.siOnStartup)
+    in_reg.RegisterTimerEvent('SoftCryDelayedStartupEvent', 0, 1000)
+    eventtimer = xsi.EventInfos('SoftCryDelayedStartupEvent')
+    eventtimer.Mute = True
+
     '''corepath = utils.BuildPath(ADDONPATH, 'SoftCry', 'Application', 'Core')
     if corepath not in sys.path:
         sys.path.append(corepath)
@@ -65,6 +70,31 @@ def XSILoadPlugin(in_reg):
 
 def XSIUnloadPlugin(in_reg):
     return True
+
+
+def SoftCryStartupEvent_OnEvent(in_ctxt):
+    evtimer = xsi.EventInfos('SoftCryDelayedStartupEvent')
+    evtimer.Mute = False
+    return False
+
+
+def SoftCryDelayedStartupEvent_OnEvent(in_ctxt):
+    add_to_path()
+    from datetime import datetime as dt
+    import requests as req
+    import webbrowser
+    for p in xsi.Plugins:
+        if p.Name == 'SoftCry':
+            origin = p.OriginPath
+            verdir = os.path.abspath(os.path.join(origin, '..', '..', 'softcry.ver'))
+            with open(verdir, 'r') as fh:
+                local_major, local_minor, local_build = fh.readline().split('.')
+    latest = req.get('https://raw.github.com/Schlechtwetterfront/softcry/master/softcry.ver')
+    major, minor, build = latest.text.split('.')
+    if build > local_build:
+        if uitk.MsgBox('''You are using an old version of SoftCry ({0}.{1}.{2}), please update to the latest ({3}.{4}.{5}).
+Go to SoftCry download page?''', 4) == 6:
+            webbrowser.open('https://github.com/Schlechtwetterfront/softcry')
 
 
 # Menu
@@ -113,6 +143,9 @@ def SoftCryExport_Execute():
         pS.AddParameter3('batch', const.siBool, config['batch'], '', 0, 0)
         pS.AddParameter3('verbose', const.siInt4, config['verbose'], 0, 2, 0, 0)
         pS.AddParameter3('addmaterial', const.siBool, config['addmaterial'], '', 0, 0)
+
+        pS.AddParameter3('matlib', const.siString, config['matlib'], '', 0, 0)
+        pS.AddParameter3('usematlib', const.siBool, config['usematlib'], '', 0, 0)
     except KeyError:
         crycore.default_settings(xsi)
         xsi.SoftCryExport()
@@ -188,10 +221,17 @@ def SoftCryExport_Execute():
     egrp()
 
     tab('Special Settings')
-    grp('Settings', 1)
+    grp('Debug', 1)
     row()
     item('debugdump', 'Debug Dump CGF')
     item('verbose', 'Verbose Level')
+    erow()
+    egrp()
+
+    grp('Material Lib', 1)
+    row()
+    item('usematlib', 'Override MatLib')
+    item('matlib', 'MatLib')
     erow()
     egrp()
 
