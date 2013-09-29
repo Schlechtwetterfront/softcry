@@ -1,15 +1,33 @@
-# -*- coding: utf-8 -*-
 import andesicore
+reload(andesicore)
 import crydaemon
 reload(crydaemon)
-reload(andesicore)
 from win32com.client import constants as const
 import subprocess
 import os
-from datetime import datetime
-now = datetime.now
-
+from datetime import datetime as dt
 import logging
+reload(logging)
+
+from win32com.client import Dispatch
+xsi = Dispatch('XSI.Application')
+
+
+def get_plugin_origin():
+    orig_path = ''
+    plugins = xsi.Plugins
+    for p in plugins:
+        if p.Name == 'SoftCry':
+            # Remove \\Application\\Plugins\\.
+            orig_path = p.OriginPath[:-20]
+    return orig_path
+
+
+logpath = os.path.join(get_plugin_origin(), 'export.log')
+logging.basicConfig(format='%(levelname)s (%(lineno)d, %(funcName)s): %(message)s',
+                    filename=logpath,
+                    filemode='w',
+                    level=logging.DEBUG)
 
 
 class MaterialConverter(andesicore.SIMaterial):
@@ -23,7 +41,6 @@ class MaterialConverter(andesicore.SIMaterial):
 
     def convert(self):
         self.crymat.phys = self.get_phys()
-        # self.crymat.emission
         self.crymat.ports['ambient'] = self.get_port('ambient')
         self.crymat.ports['diffuse'] = self.get_port('diffuse')
         self.crymat.ports['specular'] = self.get_port('specular')
@@ -95,37 +112,48 @@ class Export(andesicore.SIGeneral):
     def __init__(self, xsi, config):
         self.xsi = xsi
         self.config = config
-        self.temppath = self.get_origin() + 'Resources\\Temp\\'
-        if not os.path.isdir(self.temppath):
-            os.mkdir(self.temppath)
-        self.dest_folder = '\\'.join(self.config['path'].split('\\')[:-1])
-        self.file_name = self.config['path'].split('\\')[-1].replace('.dae', '')
-        logpath = os.path.join(self.get_origin(), 'export.log')
-        logging.basicConfig(format='%(levelname)s (%(lineno)d, %(funcName)s): %(message)s',
-                            filename=logpath,
-                            filemode='w',
-                            level=logging.DEBUG)
-        self.config['path'] = self.create_fixed_path(self.file_name)
+        self.temporary_path = os.path.join(self.get_plugin_origin(), 'Resources', 'Temp')
+        if not os.path.isdir(self.temporary_path):
+            os.mkdir(self.temporary_path)
+        self.destination_path = '\\'.join(self.config['path'].split('\\')[:-1])
+        self.filename = '.'.join(os.path.basename(self.config['path']).split('.')[:-1])
+        self.collada_path = os.path.join(self.temporary_path, self.filename + '.dae')
+        self.config['path'] = self.collada_path
+        print self.collada_path
+        print self.destination_path
+        self.rc_path = os.path.join(self.config['rcpath'], 'rc.exe')
+        #log_path = os.path.join(self.get_plugin_origin(), 'export.log')
+        #logging.baseConfig(format='%(levelname)s (%(lineno)d, %(funcName)s): %(message)s',
+        #                   filename=log_path,
+        #                   filemode='w',
+        #                   level=logging.DEBUG)
 
-    def get_origin(self):
+    def get_plugin_origin(self):
         orig_path = ''
         plugins = self.xsi.Plugins
         for p in plugins:
-            #print p.Name
             if p.Name == 'SoftCry':
+                # Remove \\Application\\Plugins\\.
                 orig_path = p.OriginPath[:-20]
         return orig_path
 
-    def create_fixed_path(self, filename):
-        path = os.path.join(self.temppath, filename + '.dae')
-        return path
+    def copy_temp_files(self):
+        import shutil
+        for item in os.listdir(self.temporary_path):
+            print item
+            if item.endswith('.dae') or item.endswith('.rcdone'):
+                continue
+            possible_file = os.path.join(self.destination_path, os.path.basename(item))
+            if os.path.isfile(possible_file):
+                os.remove(possible_file)
+            shutil.move(os.path.join(self.temporary_path, item), self.destination_path)
 
-    def create_options(self, path):
+    def create_crosswalk_options(self):
         for prop in self.xsi.ActiveSceneRoot.Properties:
             if prop.Name == 'SCCrosswalkOptions':
                 self.xsi.DeleteObj('SCCrosswalkOptions')
         options = self.xsi.ActiveSceneRoot.AddProperty('CustomProperty', False, 'SCCrosswalkOptions')
-        options.AddParameter3('FileName', const.siString, path)
+        options.AddParameter3('FileName', const.siString, self.collada_path)
         options.AddParameter3('Format', const.siInt4, 1)  # 1 = Collada file.
         options.AddParameter3('Format1', const.siInt4, 0)
         options.AddParameter3('Verbose', const.siBool, True)  # log to console.
@@ -186,17 +214,16 @@ class Export(andesicore.SIGeneral):
             clips.append(crydaemon.CryClip(name, int(starts[index]), int(ends[index])))
         return clips
 
-    def retrieve_materials(self, matman):
+    def retrieve_materials(self):
         lib = self.xsi.ActiveProject.ActiveScene.ActiveMaterialLibrary
-        matman.material_list = []
-        matman.material_dict = {}
-        matman.clip_list = []
-        matman.clip_dict = {}
+        self.material_man.material_list = []
+        self.material_man.material_dict = {}
+        self.material_man.clip_list = []
+        self.material_man.clip_dict = {}
         logging.info('Retrieving materials.')
         for ind, mat in enumerate(lib.Items):
-            conv = MaterialConverter(mat, ind, lib.Name, matman)
-            matman.add_material(conv.convert())
-            #self.materials.append(conv.convert())
+            conv = MaterialConverter(mat, ind, lib.Name, self.material_man)
+            self.material_man.add_material(conv.convert())
         logging.info('Retrieved materials.')
 
     def retrieve_clips(self):
@@ -207,88 +234,34 @@ class Export(andesicore.SIGeneral):
         else:
             logging.info('Retrieved no clips.')
 
-    def export(self):
-        logging.info('Starting export at {0}.'.format(str(now())))
-        if self.config['filetype'] == 'matlib':
-            matmanager = crydaemon.CryMaterialManager()
-            self.retrieve_materials(matmanager)
-            self.do_material_export(matmanager, self.create_fixed_path(self.file_name))
-            logging.info('Finished material export.')
-            return
-
-        if self.config['batch']:
-            self.selection = self.xsi.Selection(0)
-            roots = self.selection.Children
-            for root in roots:
-                to_select = self.get_all_children(root)
-                self.xsi.Selection.Clear()
-                for obj in to_select:
-                    self.xsi.Selection.Add(obj)
-                matmanager = crydaemon.CryMaterialManager()
-                self.retrieve_materials(matmanager)
-                self.retrieve_clips()
-                path = self.create_fixed_path(root.Name)
-                self.do_export(matmanager, path)
-            self.xsi.Selection.Clear()
-            self.xsi.Selection.Add(self.selection)
-            logging.info('Finished export.')
-            return
-        self.selection = self.xsi.Selection(0)
-        if not self.selection:
-            logging.error('No selection')
-            self.msg('No selection.', plugin='SoftCry')
-            raise SystemExit
-        try:
-            self.hierarchy = self.get_all_children(self.selection)
-        except AttributeError:
-            logging.exception('')
-            self.msg('Selection({0}: {1}) not valid.'.format(self.selection.Name, self.selection.Type), plugin='SoftCry')
-            raise SystemExit
-        if not self.hierarchy:
-            logging.error('No valid selection')
-            self.msg('No selection.', plugin='SoftCry')
-            raise SystemExit
-        matmanager = crydaemon.CryMaterialManager()
-        self.retrieve_materials(matmanager)
-        self.retrieve_clips()
-        self.do_export(matmanager, self.create_fixed_path(self.file_name))
-        logging.info('Finished export.')
-        logging.shutdown()
-
-    def do_material_export(self, matman, path):
-        print path
-        libname = self.xsi.ActiveProject.ActiveScene.ActiveMaterialLibrary.Name
-        writer = crydaemon.ColladaWriter()
-        writer.material_manager = matman
-        writer.material_lib_name = libname
-        logging.info('Starting only-material collada writing.')
-        writer.write_materials(path)
-        logging.info('Finished writing Collada file to {0}.'.format(path))
-        exepath = os.path.join(self.config['rcpath'], 'rc.exe')
-        logging.info('Calling Resource Compiler with "{0} {1} /createmtl=1"'.format(exepath, path))
-        p = subprocess.Popen((exepath, '{0}'.format(path), '/createmtl=1'), stdout=subprocess.PIPE)
+    def do_material_export(self, material_man):
+        logging.info('Starting material-only export.')
+        material_man.write(self.collada_path)
+        logging.info('Finished material-only export to {0}.'.format(self.collada_path))
+        logging.info('calling RC with "{0} {1} /createmtl=1"'.format(self.rc_path, self.collada_path))
+        p = subprocess.Popen((self.rc_path, self.collada_path, '/createmtl=1'), stdout=subprocess.PIPE)
         logging.info(p.communicate()[0])
         if self.config['deluncompiled']:
-            os.remove(path)
+            os.remove(self.collada_path)
         self.copy_temp_files()
 
-    def do_export(self, matman, path):
-        self.create_options(path)
+    def do_export(self):
+        self.create_crosswalk_options()
         logging.info('Starting Crosswalk COLLADA export.')
         self.xsi.ExportCrosswalk('SCCrosswalkOptions')
         logging.info('Finished Crosswalk COLLADA export.')
         logging.info('Starting .DAE preparation.')
-        self.config['scenename'] = os.path.basename(path)[:-4]
-        ed = crydaemon.ColladaEditor(self.config, materialman=matman, clips=self.clips)
-        ed.prepare_for_rc()
+        self.config['scenename'] = os.path.basename(self.collada_path)[:-4]
+        collada = crydaemon.Collada(self.config, material_man=self.material_man, clips=self.clips)
+        logging.info('Starting adjust.')
+        collada.adjust()
+        logging.info('Finished adjusting .DAE.')
+        collada.write()
         logging.info('Finished .DAE preparation.')
-        exepath = os.path.join(self.config['rcpath'], 'rc.exe')
-
-        command_line = [exepath, path]
+        command_line = [self.rc_path, self.collada_path]
         if self.config['debugdump']:
             command_line.append('/debugdump')
         command_line.append('/verbose={0}'.format(self.config['verbose']))
-
         logging.info('Calling Resource Compiler with "{0}"'.format(' '.join(command_line)))
         try:
             p = subprocess.Popen(command_line, stdout=subprocess.PIPE)
@@ -298,16 +271,56 @@ class Export(andesicore.SIGeneral):
             raise SystemExit
         logging.info(p.communicate()[0])
         if self.config['deluncompiled']:
-            os.remove(path)
+            os.remove(self.collada_path)
         self.copy_temp_files()
 
-    def copy_temp_files(self):
-        import shutil
-        for item in os.listdir(self.temppath):
-            print item
-            if item.endswith('.dae') or item.endswith('.rcdone'):
-                continue
-            possible_file = os.path.join(self.dest_folder, os.path.basename(item))
-            if os.path.isfile(possible_file):
-                os.remove(possible_file)
-            shutil.move(os.path.join(self.temppath, item), self.dest_folder)
+    def export(self):
+        logging.info('Starting export at {0}.'.format(str(dt.now())))
+        # Material-only export.
+        if self.config['filetype'] == 'matlib':
+            self.material_man = crydaemon.CryMaterialManager()
+            self.retrieve_materials()
+            self.do_material_export()
+            logging.info('Finished material export at {0}.'.format(str(dt.now())))
+            return
+        # Batch export.
+        elif self.config['batch']:
+            self.selection = self.xsi.Selection(0)
+            roots = self.selection.Children
+            for root in roots:
+                to_select = self.get_all_children(root)
+                self.xsi.Selection.Clear()
+                for obj in to_select:
+                    self.xsi.Selection.Add(obj)
+                self.material_man = crydaemon.CryMaterialManager()
+                self.retrieve_materials()
+                self.retrieve_clips()
+                self.collada_path = os.path.join(self.temporary_path, root.Name + '.dae')
+                self.do_export()
+            self.xsi.Selection.Clear()
+            self.xsi.Selection.Add(self.selection)
+            logging.info('Finished batch export.')
+            return
+        # Standard export.
+        else:
+            self.selection = self.xsi.Selection(0)
+            if not self.selection:
+                logging.error('No selection')
+                self.msg('No selection.', plugin='SoftCry')
+                raise SystemExit
+            try:
+                self.hierarchy = self.get_all_children(self.selection)
+            except AttributeError:
+                logging.exception('')
+                self.msg('Selection({0}: {1}) not valid.'.format(self.selection.Name, self.selection.Type), plugin='SoftCry')
+                raise SystemExit
+            if not self.hierarchy:
+                logging.error('No valid selection')
+                self.msg('No selection.', plugin='SoftCry')
+                raise SystemExit
+            self.material_man = crydaemon.CryMaterialManager()
+            self.retrieve_materials()
+            self.retrieve_clips()
+            self.do_export()
+            logging.info('Finished export.')
+            logging.shutdown()

@@ -15,25 +15,6 @@ def save_settings(xsi, settings):
         json.dump(settings, fh)
 
 
-def default_settings(xsi):
-    sett = {
-        'donotmerge': True,
-        'path': 'C:\\Users\\administrator\\Documents\\CE_353\\GameSDK\\Objects\\xxx.dae',
-        'customnormals': True,
-        'filetype': 'cgf',  # cgf | cgaanm | chrcaf | matlib
-        'rcpath': 'C:\\Users\\administrator\\Documents\\CE_353\\bin32\\rc\\',
-        'unit': 'meter',  # meter | centimeter
-        'batch': False,
-        'deluncompiled': True,
-        'debugdump': False,
-        'verbose': 0,
-        'addmaterial': False,
-    }
-    path = os.path.join(xsi.InstallationPath(const.siUserAddonPath), 'SoftCry', 'Resources', 'settings')
-    with open(path, 'w') as fh:
-        json.dump(sett, fh)
-
-
 def get_default_settings():
     sett = {
         'donotmerge': True,
@@ -46,6 +27,15 @@ def get_default_settings():
         'deluncompiled': True,
         'debugdump': False,
         'verbose': 0,
-        'addmaterial': False,
+        'usespaces': False,
+        'keyforspace': '-',
+        'f32': False,
     }
     return sett
+
+
+def default_settings(xsi):
+    sett = get_default_settings()
+    path = os.path.join(xsi.InstallationPath(const.siUserAddonPath), 'SoftCry', 'Resources', 'settings')
+    with open(path, 'w') as fh:
+        json.dump(sett, fh)

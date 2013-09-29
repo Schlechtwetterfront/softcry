@@ -10,10 +10,10 @@ utils = XSIUtils
 
 ADDONPATH = xsi.InstallationPath(const.siUserAddonPath)
 MATERIAL_PHYS = ('physDefault',  # default collision
-                'physProxyNoDraw',  # default collision but geometry is invisible
-                'physNone',  # no collision
-                'physObstruct',  # only obstructs AI view
-                'physNoCollide')  # will collide with bullets
+                 'physProxyNoDraw',  # default collision but geometry is invisible
+                 'physNone',  # no collision
+                 'physObstruct',  # only obstructs AI view
+                 'physNoCollide')  # will collide with bullets
 
 
 def add_to_path():
@@ -38,7 +38,6 @@ def get_origin():
 
 def check_version(quiet=False):
     add_to_path()
-    from datetime import datetime as dt
     import requests as req
     import webbrowser
     for p in xsi.Plugins:
@@ -57,8 +56,7 @@ Go to SoftCry download page?'''.format(local_major, local_minor, local_build, ma
         if quiet:
             return
         uitk.MsgBox('Build up to date (local: {0}.{1}.{2}, remote: {3}.{4}.{5}).'.format(local_major,
-                local_minor, local_build, major, minor, build))
-
+                    local_minor, local_build, major, minor, build))
 
 
 def XSILoadPlugin(in_reg):
@@ -78,7 +76,6 @@ def XSILoadPlugin(in_reg):
     in_reg.RegisterCommand('SoftCryTools', 'SoftCryTools')
     in_reg.RegisterCommand('SoftCryCheckVersion', 'SoftCryCheckVersion')
 
-    
     in_reg.RegisterEvent('SoftCryStartupEvent', const.siOnStartup)
     in_reg.RegisterTimerEvent('SoftCryDelayedStartupEvent', 0, 1000)
     eventtimer = xsi.EventInfos('SoftCryDelayedStartupEvent')
@@ -145,18 +142,18 @@ def SoftCryExport_Execute():
         pS.AddParameter3('customnormals', const.siBool, config['customnormals'], '', 0, 0)
         pS.AddParameter3('donotmerge', const.siBool, config['donotmerge'], '', 0, 0)
         pS.AddParameter3('filetype', const.siString, config['filetype'], '', 0, 0)
-        file_types = ('CGF', 'cgf', 'CGA', 'cgaanm', 'CHRCAF', 'chrcaf', 'Material', 'matlib')
+        file_types = ('CGF', 'cgf', 'CGA ANM', 'cgaanm', 'CHR CAF', 'chrcaf', 'SKIN', 'skin', 'Material', 'matlib')
 
         pS.AddParameter3('unit', const.siString, config['unit'], '', 0, 0)
         units = 'Meter', 'meter', 'Centimeter', 'centimeter'
 
-        pS.AddParameter3('deluncompiled', const.siBool, config['deluncompiled'], '', 0, 0)
-        pS.AddParameter3('debugdump', const.siBool, config['debugdump'], '', 0, 0)
-        pS.AddParameter3('batch', const.siBool, config['batch'], '', 0, 0)
-        pS.AddParameter3('verbose', const.siInt4, config['verbose'], 0, 2, 0, 0)
-        pS.AddParameter3('addmaterial', const.siBool, config['addmaterial'], '', 0, 0)
-
-        pS.AddParameter3('matlib', const.siString, '')
+        pS.AddParameter3('deluncompiled', const.siBool, config['deluncompiled'], '', '', 0)
+        pS.AddParameter3('debugdump', const.siBool, config['debugdump'], '', '', 0)
+        pS.AddParameter3('batch', const.siBool, config['batch'], '', '', 0)
+        pS.AddParameter3('verbose', const.siInt4, config['verbose'], 0, 2, 0)
+        pS.AddParameter3('usespaces', const.siBool, config['usespaces'], '', '', 0)
+        pS.AddParameter3('keyforspace', const.siString, config['keyforspace'], '', '', 0, 1)
+        pS.AddParameter3('f32', const.siBool, False, '', '', 0, 0)
     except KeyError:
         crycore.default_settings(xsi)
         xsi.SoftCryExport()
@@ -180,7 +177,7 @@ def SoftCryExport_Execute():
     tab('Export')
     path_ctrl = item('path', 'File', const.siControlFilePath)
     path_ctrl.SetAttribute(const.siUINoLabel, 1)
-    path_ctrl.SetAttribute(const.siUIFileFilter, 'File (*.dae)|*.dae')
+    path_ctrl.SetAttribute(const.siUIFileFilter, 'File (*.cgf, *.cga, *.chr)|*.cgf:*.cga*.chr')
     path_ctrl.SetAttribute(const.siUIOpenFile, False)
     path_ctrl.SetAttribute(const.siUIFileMustExist, False)
 
@@ -188,61 +185,55 @@ def SoftCryExport_Execute():
     texPathI.SetAttribute(const.siUINoLabel, 1)
     texPathI.SetAttribute(const.siUIWidthPercentage, 55)
 
-    grp('', 0)
-    row()
 
     exgrp = grp('Export', 1)
-    exgrp.SetAttribute(const.siUIWidthPercentage, 50)
-    #row()
+    row()
     item('deluncompiled', 'Delete Uncompiled')
-    item('batch', 'Batch Export')
-    item('onlymaterials', 'Only Materials')
-    unit = enum('unit', units, 'Unit', const.siControlCombo)
-    unit.SetAttribute('NoLabel', True)
-    item('addmaterial', 'Non-destructive')
-    #erow()
-    egrp()
-
-
-    cgrp = grp('Compile', 1)
-    cgrp.SetAttribute(const.siUIWidthPercentage, 50)
-    #row()
-    text('')
     item('donotmerge', 'Do Not Merge')
+    bf32 = item('f32', 'F32')
+    bf32.SetAttribute(const.siUIWidthPercentage, 15.5)
+    erow()
+
+    row()
+    item('batch', 'Batch Export')
     item('customnormals', 'Custom Normals')
-    filetype = enum('filetype', file_types, 'File Type', const.siControlCombo)
-    filetype.SetAttribute('NoLabel', True)
-    #erow()
-    egrp()
-
-
-    grp('', 0)
-    text('')
-    text('')
-    text('')
-    #row()
     b = btn('help', 'Help')
     b.SetAttribute(const.siUICX, 80)
+    erow()
+
+    row()
+    unit = enum('unit', units, 'Unit', const.siControlCombo)
+    unit.SetAttribute('NoLabel', True)
+    filetype = enum('filetype', file_types, 'File Type', const.siControlCombo)
+    filetype.SetAttribute('NoLabel', True)
     b = btn('Export', 'Export')
     b.SetAttribute(const.siUICX, 80)
-    #erow()
-    egrp()
-
     erow()
     egrp()
 
     tab('Special Settings')
     grp('Debug', 1)
     row()
-    item('debugdump', 'Debug Dump CGF')
-    item('verbose', 'Verbose Level')
+    bdebugdump = item('debugdump', 'Debug Dump CGF')
+    bdebugdump.SetAttribute(const.siUIWidthPercentage, 20)
+    iverbose = item('verbose', 'Verbose Level')
+    iverbose.SetAttribute(const.siUILabelPercentage, 90)
+    erow()
+    egrp()
+
+    grp('Spaces', 1)
+    row()
+    bspaces = item('usespaces', 'Enable Spaces')
+    bspaces.SetAttribute(const.siUIWidthPercentage, 20)
+    skeyforspace = item('keyforspace', 'Replace With Space')
+    skeyforspace.SetAttribute(const.siUILabelPercentage, 90)
     erow()
     egrp()
 
     desk = xsi.Desktop.ActiveLayout
     view = desk.CreateView('Property Panel', 'SoftCryExport')
     view.BeginEdit()
-    view.Resize(400, 207)
+    view.Resize(400, 190)
     view.SetAttributeValue('targetcontent', pS.FullName)
     view.EndEdit()
     return True
@@ -483,7 +474,7 @@ def SoftCryTools_Execute():
         mat_phys_special.extend((phys_type, phys_type))
     enum_ctrl = enum('phystypes', mat_phys_special, 'Physicalization', const.siControlCombo)
     enum_ctrl.SetAttribute('NoLabel', True)
-    
+
     physbtn = btn('setphys', 'Set For Selected')
     #physbtn.SetAttribute(const.siUICX, 105)
     #spacer(0, 1)
