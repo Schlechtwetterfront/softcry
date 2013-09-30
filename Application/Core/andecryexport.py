@@ -234,9 +234,9 @@ class Export(andesicore.SIGeneral):
         else:
             logging.info('Retrieved no clips.')
 
-    def do_material_export(self, material_man):
+    def do_material_export(self):
         logging.info('Starting material-only export.')
-        material_man.write(self.collada_path)
+        self.material_man.write(self.collada_path)
         logging.info('Finished material-only export to {0}.'.format(self.collada_path))
         logging.info('calling RC with "{0} {1} /createmtl=1"'.format(self.rc_path, self.collada_path))
         p = subprocess.Popen((self.rc_path, self.collada_path, '/createmtl=1'), stdout=subprocess.PIPE)
