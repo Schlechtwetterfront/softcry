@@ -37,6 +37,10 @@ def get_origin():
 
 
 def check_version(quiet=False):
+    pb = uitk.ProgressBar
+    pb.Caption = 'Checking SoftCry Version...'
+    pb.Visible = True
+    pb.Maximum = 1
     add_to_path()
     import requests as req
     import webbrowser
@@ -46,17 +50,34 @@ def check_version(quiet=False):
             verdir = os.path.abspath(os.path.join(origin, '..', '..', 'softcry.ver'))
             with open(verdir, 'r') as fh:
                 local_major, local_minor, local_build = fh.readline().split('.')
-    latest = req.get('https://raw.github.com/Schlechtwetterfront/softcry/master/softcry.ver')
+    prefs = xsi.Preferences
+    timeout = prefs.GetPreferenceValue('SoftCry.timeout')
+    try:
+        latest = req.get('http://raw.github.com/Schlechtwetterfront/softcry/master/softcry.ver', timeout=timeout)
+    except (req.ConnectionError, req.Timeout):
+        if quiet:
+            pb.Visible = False
+            return
+        uitk.MsgBox('Could not connect to github or timed out, version check not successful. Check Preferences>Custom>SoftCry>timeout.')
+        pb.Visible = False
+        return
     major, minor, build = latest.text.split('.')
+    pb.Value = 1
     if build > local_build:
         if uitk.MsgBox('''You are using an old version of SoftCry ({0}.{1}.{2}), please update to the latest ({3}.{4}.{5}).
-Go to SoftCry download page?'''.format(local_major, local_minor, local_build, major, minor, build), 4) == 6:
-            webbrowser.open('https://github.com/Schlechtwetterfront/softcry')
+Go to SoftCry download page?
+
+Note: You can disable the version check in Preferences>Custom>SoftCry'''.format(local_major, local_minor, local_build, major, minor, build), 4) == 6:
+            webbrowser.open('http://github.com/Schlechtwetterfront/softcry')
     else:
         if quiet:
+            pb.Visible = False
             return
-        uitk.MsgBox('Build up to date (local: {0}.{1}.{2}, remote: {3}.{4}.{5}).'.format(local_major,
+        uitk.MsgBox('''Build up to date (local: {0}.{1}.{2}, remote: {3}.{4}.{5}).
+
+Note: You can disable the version check in Preferences>Custom>SoftCry'''.format(local_major,
                     local_minor, local_build, major, minor, build))
+    pb.Visible = False
 
 
 def XSILoadPlugin(in_reg):
@@ -80,13 +101,6 @@ def XSILoadPlugin(in_reg):
     in_reg.RegisterTimerEvent('SoftCryDelayedStartupEvent', 0, 1000)
     eventtimer = xsi.EventInfos('SoftCryDelayedStartupEvent')
     eventtimer.Mute = True
-
-    '''corepath = utils.BuildPath(ADDONPATH, 'SoftCry', 'Application', 'Core')
-    if corepath not in sys.path:
-        sys.path.append(corepath)
-    modpath = utils.BuildPath(ADDONPATH, 'SoftCry', 'Application', 'Modules')
-    if modpath not in sys.path:
-        sys.path.append(modpath)'''
     return True
 
 
@@ -101,6 +115,18 @@ def SoftCryStartupEvent_OnEvent(in_ctxt):
 
 
 def SoftCryDelayedStartupEvent_OnEvent(in_ctxt):
+    prefs = xsi.Preferences
+    if not prefs.Categories('SoftCry'):
+        print 'No prefs.'
+        pset = xsi.ActiveSceneRoot.AddProperty('CustomProperty', False, 'SoftCry')
+        pset.AddParameter3('check_version_on_startup', const.siBool, True, '', '', 0, 0)
+        pset.AddParameter3('timeout', const.siDouble, 2, 0, 10, 0, 0)
+        xsi.InstallCustomPreferences(pset, 'SoftCry')
+    if prefs.Categories('SoftCry'):
+        do_check = prefs.GetPreferenceValue('SoftCry.check_version_on_startup')
+        print do_check
+        if not do_check:
+            return False
     check_version(True)
     return False
 
