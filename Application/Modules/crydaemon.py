@@ -312,8 +312,6 @@ class Collada(object):
             inst = node.find('instance_controller')
             if inst is None:
                 return
-            else:
-                inst.set('url', '#{0}'.format(self.controllers[inst.get('url')[1:]]))
         bind_mat = inst.find('bind_material')
         if bind_mat is not None:
             tech = bind_mat.find('technique_common')

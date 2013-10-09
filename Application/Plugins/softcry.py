@@ -15,6 +15,17 @@ MATERIAL_PHYS = ('physDefault',  # default collision
                  'physObstruct',  # only obstructs AI view
                  'physNoCollide')  # will collide with bullets
 
+OLD_VERSION_MSG = '''You are using an old version of SoftCry ({0}.{1}.{2}), please update to the latest ({3}.{4}.{5}).
+Go to SoftCry download page?
+
+Note: You can disable the version check in Preferences>Custom>SoftCry'''
+
+UP_TO_DATE_MSG = '''Build up to date (local: {0}.{1}.{2}, remote: {3}.{4}.{5}).
+
+Note: You can disable the version check in Preferences>Custom>SoftCry'''
+
+CHECK_VERSION_ERROR_MSG = 'Could not connect to github or timed out, version check not successful. Check Preferences>Custom>SoftCry>timeout.'
+
 
 def add_to_path():
     orig_path = get_origin()
@@ -58,25 +69,20 @@ def check_version(quiet=False):
         if quiet:
             pb.Visible = False
             return
-        uitk.MsgBox('Could not connect to github or timed out, version check not successful. Check Preferences>Custom>SoftCry>timeout.')
+        uitk.MsgBox(CHECK_VERSION_ERROR_MSG)
         pb.Visible = False
         return
     major, minor, build = latest.text.split('.')
     pb.Value = 1
     if build > local_build:
-        if uitk.MsgBox('''You are using an old version of SoftCry ({0}.{1}.{2}), please update to the latest ({3}.{4}.{5}).
-Go to SoftCry download page?
-
-Note: You can disable the version check in Preferences>Custom>SoftCry'''.format(local_major, local_minor, local_build, major, minor, build), 4) == 6:
+        if uitk.MsgBox(OLD_VERSION_MSG.format(local_major, local_minor, local_build, major, minor, build), 4) == 6:
             webbrowser.open('http://github.com/Schlechtwetterfront/softcry')
     else:
         if quiet:
             pb.Visible = False
             return
-        uitk.MsgBox('''Build up to date (local: {0}.{1}.{2}, remote: {3}.{4}.{5}).
-
-Note: You can disable the version check in Preferences>Custom>SoftCry'''.format(local_major,
-                    local_minor, local_build, major, minor, build))
+        uitk.MsgBox(UP_TO_DATE_MSG.format(local_major, local_minor,
+                                          local_build, major, minor, build))
     pb.Visible = False
 
 
@@ -124,8 +130,8 @@ def SoftCryDelayedStartupEvent_OnEvent(in_ctxt):
         xsi.InstallCustomPreferences(pset, 'SoftCry')
     if prefs.Categories('SoftCry'):
         do_check = prefs.GetPreferenceValue('SoftCry.check_version_on_startup')
-        print do_check
-        if not do_check:
+        print 'do_check:', do_check, type(do_check)
+        if do_check == 'False':
             return False
     check_version(True)
     return False
