@@ -215,13 +215,16 @@ class Export(andesicore.SIGeneral):
         return clips
 
     def retrieve_materials(self):
-        lib = self.xsi.ActiveProject.ActiveScene.ActiveMaterialLibrary
+        #lib = self.xsi.ActiveProject.ActiveScene.ActiveMaterialLibrary
+        lib = self.xsi.Selection(0).Material.Library
+        logging.info('Used MaterialLibrary: {0}'.format(lib.FullName))
         self.material_man.material_list = []
         self.material_man.material_dict = {}
         self.material_man.clip_list = []
         self.material_man.clip_dict = {}
         logging.info('Retrieving materials.')
         for ind, mat in enumerate(lib.Items):
+            logging.debug('Converting Material: {0}'.format(mat.FullName))
             conv = MaterialConverter(mat, ind, lib.Name, self.material_man)
             self.material_man.add_material(conv.convert())
         logging.info('Retrieved materials.')
@@ -275,7 +278,8 @@ class Export(andesicore.SIGeneral):
         self.copy_temp_files()
 
     def export(self):
-        logging.info('Starting export at {0}.'.format(str(dt.now())))
+        self.export_start_time = dt.now()
+        logging.info('Starting export at {0}.'.format(str(self.export_start_time)))
         # Material-only export.
         if self.config['filetype'] == 'matlib':
             self.material_man = crydaemon.CryMaterialManager()
@@ -290,6 +294,7 @@ class Export(andesicore.SIGeneral):
             for root in roots:
                 to_select = self.get_all_children(root)
                 self.xsi.Selection.Clear()
+                logging.debug('Selection: {0}'.format(', '.join([obj.Name for obj in to_select])))
                 for obj in to_select:
                     self.xsi.Selection.Add(obj)
                 self.material_man = crydaemon.CryMaterialManager()
@@ -299,7 +304,8 @@ class Export(andesicore.SIGeneral):
                 self.do_export()
             self.xsi.Selection.Clear()
             self.xsi.Selection.Add(self.selection)
-            logging.info('Finished batch export.')
+            timing_result = dt.now() - self.export_start_time
+            logging.info('Finished batch export ({0}s, {1}ms).'.format(timing_result.seconds, timing_result.microseconds))
             return
         # Standard export.
         else:
@@ -310,6 +316,7 @@ class Export(andesicore.SIGeneral):
                 raise SystemExit
             try:
                 self.hierarchy = self.get_all_children(self.selection)
+                logging.debug('Selection: {0}'.format(', '.join([obj.Name for obj in self.hierarchy])))
             except AttributeError:
                 logging.exception('')
                 self.msg('Selection({0}: {1}) not valid.'.format(self.selection.Name, self.selection.Type), plugin='SoftCry')
@@ -322,5 +329,6 @@ class Export(andesicore.SIGeneral):
             self.retrieve_materials()
             self.retrieve_clips()
             self.do_export()
-            logging.info('Finished export.')
+            timing_result = dt.now() - self.export_start_time
+            logging.info('Finished export ({0}s, {1}ms).'.format(timing_result.seconds, timing_result.microseconds))
             logging.shutdown()

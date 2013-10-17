@@ -90,7 +90,7 @@ def XSILoadPlugin(in_reg):
     in_reg.Author = 'Ande'
     in_reg.Name = 'SoftCry'
     in_reg.Email = 'schlchtwtrfrnt@gmail.com'
-    in_reg.URL = 'https://sites.google.com/site/andescp/'
+    in_reg.URL = 'https://github.com/Schlechtwetterfront/softcry'
     in_reg.Major = 1
     in_reg.Minor = 0
 

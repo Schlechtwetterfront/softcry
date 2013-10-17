@@ -332,6 +332,10 @@ class Collada(object):
         asset = self.root.find('asset')
         tool = asset.find('contributor').find('authoring_tool')
         tool.text = 'Softimage Crosswalk exporter featuring SoftCry exporter by Ande'
+        url = asset.find('contributor').find('url')
+        if not url:
+            url = SubElement(asset.find('contributor'), 'url')
+        url.text = 'https://github.com/Schlechtwetterfront/softcry'
         unit = asset.find('unit')
         if self.config['unit'] != 'meter':
             del unit.attrib['meter']
