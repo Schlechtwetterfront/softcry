@@ -317,7 +317,13 @@ class Collada(object):
             tech = bind_mat.find('technique_common')
             if tech is not None:
                 for inst_mat in tech:
-                    newname = self.material_man.material_dict_old[inst_mat.attrib['symbol']].name
+                    if '.' in inst_mat.get('symbol'):
+                        # If multiple material libraries are in a scene the materials will be named
+                        # <matlib>.<matname>. '.' can't be used for names by the user, so it's safe
+                        # to just split the material name if it occurs.
+                        newname = self.material_man.material_dict_old[inst_mat.get('symbol').split('.')[-1]].name
+                    else:
+                        newname = self.material_man.material_dict_old[inst_mat.attrib['symbol']].name
                     inst_mat.attrib['symbol'] = newname
                     inst_mat.attrib['target'] = '#{0}'.format(newname)
 
@@ -380,7 +386,13 @@ class Collada(object):
             for tris in triangles:
                 print tris.get('material')
                 print self.material_man.material_dict_old.keys()
-                tris.attrib['material'] = self.material_man.material_dict_old[tris.attrib['material']].name
+                if '.' in tris.get('material'):
+                    # If multiple material libraries are in a scene the materials will be named
+                    # <matlib>.<matname>. '.' can't be used for names by the user, so it's safe
+                    # to just split the material name if it occurs.
+                    tris.set('material', self.material_man.material_dict_old[tris.get('material').split('.')[-1]].name)
+                else:
+                    tris.attrib['material'] = self.material_man.material_dict_old[tris.attrib['material']].name
                 p = tris.find('p')
                 if p is not None:
                     p.text = self.roundx(p.text)
