@@ -55,12 +55,10 @@ def check_version(quiet=False):
     add_to_path()
     import requests as req
     import webbrowser
-    for p in xsi.Plugins:
-        if p.Name == 'SoftCry':
-            origin = p.OriginPath
-            verdir = os.path.abspath(os.path.join(origin, '..', '..', 'softcry.ver'))
-            with open(verdir, 'r') as fh:
-                local_major, local_minor, local_build = fh.readline().split('.')
+    origin = get_origin()
+    verdir = os.path.abspath(os.path.join(origin, 'softcry.ver'))
+    with open(verdir, 'r') as fh:
+        local_major, local_minor, local_build = fh.readline().split('.')
     prefs = xsi.Preferences
     timeout = prefs.GetPreferenceValue('SoftCry.timeout')
     try:

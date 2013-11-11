@@ -1,16 +1,26 @@
 import json
 import os
-from win32com.client import constants as const
+
+
+def get_origin(xsi):
+    orig_path = ''
+    plugins = xsi.Plugins
+    for p in plugins:
+        #print p.Name
+        if p.Name == 'SoftCry':
+            orig_path = p.OriginPath[:-20]
+    print orig_path
+    return orig_path
 
 
 def load_settings(xsi):
-    path = os.path.join(xsi.InstallationPath(const.siUserAddonPath), 'SoftCry', 'Resources', 'settings')
+    path = os.path.join(get_origin(xsi), 'Resources', 'settings')
     with open(path, 'r') as fh:
         return json.load(fh)
 
 
 def save_settings(xsi, settings):
-    path = os.path.join(xsi.InstallationPath(const.siUserAddonPath), 'SoftCry', 'Resources', 'settings')
+    path = os.path.join(get_origin(xsi), 'Resources', 'settings')
     with open(path, 'w') as fh:
         json.dump(settings, fh)
 
@@ -36,6 +46,6 @@ def get_default_settings():
 
 def default_settings(xsi):
     sett = get_default_settings()
-    path = os.path.join(xsi.InstallationPath(const.siUserAddonPath), 'SoftCry', 'Resources', 'settings')
+    path = os.path.join(get_origin(xsi), 'Resources', 'settings')
     with open(path, 'w') as fh:
         json.dump(sett, fh)

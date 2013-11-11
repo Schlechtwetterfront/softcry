@@ -53,7 +53,7 @@ def cross(a, b):
 
 # Area of polygon poly.
 def area(poly):
-    if len(poly) < 3: # not a plane - no area
+    if len(poly) < 3:  # not a plane - no area
         return 0
 
     total = [0, 0, 0]
@@ -172,7 +172,7 @@ def showrgb_OnClicked():
 
 def showalpha_OnClicked():
     set_vc_display('alpha')
-    
+
 
 def helpvc_OnClicked():
     sigen.msg('Will set the Vertex Color display mode for the focused viewport to either RGB or Alpha.', plugin='SoftCry')
@@ -181,8 +181,9 @@ def helpvc_OnClicked():
 def syncmathelp_OnClicked():
     sigen.msg('Sync the selected .mtl multi material with the current Material Library.')
 
+
 def sync_OnClicked():
-    from xml.etree.ElementTree import ElementTree, SubElement, Element
+    from xml.etree.ElementTree import ElementTree
     ppg = PPG.Inspected(0)
     path = ppg.Parameters('mtlpath').Value
     if not path:
