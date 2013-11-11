@@ -467,6 +467,7 @@ def SoftCryTools_Init(in_ctxt):
 
 
 def SoftCryTools_Execute():
+    add_to_path()
     for prop in xsi.ActiveSceneRoot.Properties:
         if prop.Name == 'SoftCryToolsProp':
             xsi.DeleteObj('SoftCryToolsProp')
