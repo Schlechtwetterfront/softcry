@@ -118,14 +118,18 @@ def SoftCryStartupEvent_OnEvent(in_ctxt):
     return False
 
 
+def install_preferences():
+    pset = xsi.ActiveSceneRoot.AddProperty('CustomProperty', False, 'SoftCry')
+    pset.AddParameter3('check_version_on_startup', const.siBool, True, '', '', 0, 0)
+    pset.AddParameter3('timeout', const.siDouble, 2, 0, 10, 0, 0)
+    xsi.InstallCustomPreferences(pset, 'SoftCry')
+
+
 def SoftCryDelayedStartupEvent_OnEvent(in_ctxt):
     prefs = xsi.Preferences
     if not prefs.Categories('SoftCry'):
-        print 'No prefs.'
-        pset = xsi.ActiveSceneRoot.AddProperty('CustomProperty', False, 'SoftCry')
-        pset.AddParameter3('check_version_on_startup', const.siBool, True, '', '', 0, 0)
-        pset.AddParameter3('timeout', const.siDouble, 2, 0, 10, 0, 0)
-        xsi.InstallCustomPreferences(pset, 'SoftCry')
+        xsi.LogMessage('No prefs.')
+        install_preferences()
     if prefs.Categories('SoftCry'):
         do_check = prefs.GetPreferenceValue('SoftCry.check_version_on_startup')
         print 'do_check:', do_check, type(do_check)
