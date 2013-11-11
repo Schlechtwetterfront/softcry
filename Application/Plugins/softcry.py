@@ -207,7 +207,7 @@ def SoftCryExport_Execute():
     tab('Export')
     path_ctrl = item('path', 'File', const.siControlFilePath)
     path_ctrl.SetAttribute(const.siUINoLabel, 1)
-    path_ctrl.SetAttribute(const.siUIFileFilter, 'File (*.cgf, *.cga, *.chr)|*.cgf:*.cga*.chr')
+    path_ctrl.SetAttribute(const.siUIFileFilter, 'CRYENGINE Files (*.cgf, *.cga, *.chr)|*.cgf:*.cga:*.chr')
     path_ctrl.SetAttribute(const.siUIOpenFile, False)
     path_ctrl.SetAttribute(const.siUIFileMustExist, False)
 

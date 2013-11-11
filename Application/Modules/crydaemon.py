@@ -465,6 +465,7 @@ class Collada(object):
                 clip_node.set('start', str(clip.start))
                 clip_node.set('end', str(clip.end))
                 clip_node.set('id', clip.name)
+                clip_node.set('name', clip.name)
                 for anim in lib_anims:
                     inst_anim = SubElement(clip_node, 'instance_animation')
                     inst_anim.set('url', '#{0}'.format(anim.get('id')))

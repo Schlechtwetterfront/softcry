@@ -15,8 +15,12 @@ def get_origin(xsi):
 
 def load_settings(xsi):
     path = os.path.join(get_origin(xsi), 'Resources', 'settings')
-    with open(path, 'r') as fh:
-        return json.load(fh)
+    try:
+        with open(path, 'r') as fh:
+            return json.load(fh)
+    except IOError:
+        default_settings(xsi)
+        return get_default_settings()
 
 
 def save_settings(xsi, settings):
