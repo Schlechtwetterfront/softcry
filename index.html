@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>ZE File Formats by Schlechtwetterfront</title>
+    <title>SoftCry CRYENGINE Exporter for Softimage</title>
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/pygment_trac.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
@@ -20,9 +20,9 @@
   <body>
       <div id="header">
         <nav>
-          <li class="fork"><a href="https://github.com/Schlechtwetterfront/ze_filetypes">View On GitHub</a></li>
-          <li class="downloads"><a href="https://github.com/Schlechtwetterfront/ze_filetypes/zipball/gh-pages">ZIP</a></li>
-          <li class="downloads"><a href="https://github.com/Schlechtwetterfront/ze_filetypes/tarball/gh-pages">TAR</a></li>
+          <li class="fork"><a href="https://github.com/Schlechtwetterfront/softcry">View On GitHub</a></li>
+          <li class="downloads"><a href="https://github.com/Schlechtwetterfront/softcry/zipball/master">ZIP</a></li>
+          <li class="downloads"><a href="https://github.com/Schlechtwetterfront/softcry/tarball/master">TAR</a></li>
           <li class="title">DOWNLOADS</li>
         </nav>
       </div><!-- end header -->
@@ -31,26 +31,37 @@
 
       <section>
         <div id="title">
-          <h1>ZE File Formats</h1>
+          <h1>SoftCry CRYENGINE Exporter for Softimage</h1>
           <p></p>
           <hr>
           <span class="credits left">Project maintained by <a href="https://Schlechtwetterfront.github.com/">Schlechtwetterfront</a></span>
           <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
         </div>
-
-        <h2>
-<a name="formats" class="anchor" href="#formats"><span class="octicon octicon-link"></span></a>Formats</h2>
-
+		<h2>SoftCry</h2>
+CryENGINE 3 exporter for Softimage.
+<br>
 <ul>
-<li><a href="msh.html"><strong>.MSH</strong></a></li>
-<li><a href="ter.html"><strong>.TER</strong></a></li>
-</ul><h2>
-<a name="other" class="anchor" href="#other"><span class="octicon octicon-link"></span></a>Other</h2>
-
+<li>Intuitive workflow for exporting.</li>
+<li>No special setup required for a basic export.</li>
+<li>CryEngine specific material properties directly interface with Softimage materials, so there is no restriction on the type of shaders/materials you can use in XSI.</li>
+<li>Batch export.</li>
+<li>Support for different grid-units (1 unit = 1cm or 1m).</li>
+<li>Animation export + straight forward animation clip editor.</li>
+</ul>
+Supports XSI ModTool 7.5, Softimage 2014 64bit (, Softimage 2012 SP1 64bit).
+<br><br>
+<h2>Required</h2>
+Python 2.6+ (not Python 3), check https://sites.google.com/site/andescp/tut_pyxsi.
+Any version above Softimage 2011 has Python already installed, so no need to do anything.
+<br><br>
+<h2>Installation</h2>
+Either pull the repository to <strong><USER>\\Autodesk\\Softimage_20xx\\Addons\\SoftCry</strong><br>
+or clone the repository to <strong><USER>\\Autodesk\\Softimage_20xx\\Addons\\</strong><br>
+or download the .ZIP and extract it to <strong><USER>\\Autodesk\\Softimage_20xx\\Addons\\.</strong><br>
+<br>
+<h2>Information</h2>
 <ul>
-<li><a href="rendertypes.html"><strong>Render Types</strong></a></li>
-<li><a href="crc.html"><strong>Zero CRC</strong></a></li>
-<li><a href="zeflagcalc.html"><strong>ZE Flag Calculator</strong></a></li>
+<li><a href="http://www.youtube.com/watch?v=2Rt3B8h5EvE">How to export hard-body animations</a></li>
 </ul>
       </section>
 
