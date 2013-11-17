@@ -1,6 +1,7 @@
 xsi = Application
 ui = XSIUIToolkit
 import andesicore
+from win32com.client import constants as const
 sigen = andesicore.SIGeneral()
 
 
@@ -25,15 +26,15 @@ def det(a):
 
 # Unit normal vector of plane defined by points a, b, and c.
 def unit_normal(a, b, c):
-    x = det([[1,a[1],a[2]],
-             [1,b[1],b[2]],
-             [1,c[1],c[2]]])
-    y = det([[a[0],1,a[2]],
-             [b[0],1,b[2]],
-             [c[0],1,c[2]]])
-    z = det([[a[0],a[1],1],
-             [b[0],b[1],1],
-             [c[0],c[1],1]])
+    x = det([[1, a[1], a[2]],
+            [1, b[1], b[2]],
+            [1, c[1], c[2]]])
+    y = det([[a[0], 1, a[2]],
+            [b[0], 1, b[2]],
+            [c[0], 1, c[2]]])
+    z = det([[a[0], a[1], 1],
+            [b[0], b[1], 1],
+            [c[0], c[1], 1]])
     magnitude = (x**2 + y**2 + z**2)**.5
     return (x/magnitude, y/magnitude, z/magnitude)
 
@@ -89,6 +90,39 @@ def set_vc_display(mode):
         xsi.SetValue('Views.View{0}.UserCamera.camdisp.vcdisplay'.format(focused), mode, '')
     elif cam_type == 'Camera':
         xsi.SetValue('{0}.camdisp.vcdisplay'.format(cam_type), mode, '')
+
+
+def get_matlib_property(matlib):
+    for prop in matlib.Properties:
+        if 'SoftCryMatLib' in prop.Name:
+            return prop
+
+
+def add_matlib_property(matlib, extpath, isext=True):
+    prop = get_matlib_property(matlib)
+    if prop:
+        xsi.DeleteObj(prop)
+    ps = matlib.AddProperty('CustomProperty', False, 'SoftCryMatLib')
+    ps.AddParameter3('external_matlib', const.siString, extpath)
+    ps.AddParameter3('is_external', const.siBool, isext, 0, 0, 0)
+
+    lay = ps.PPGLayout
+
+    lay.AddGroup('External')
+    lay.AddItem('is_external', 'Is External')
+    lay.AddItem('external_matlib', 'Path')
+    lay.EndGroup()
+    return ps
+
+
+def get_relative_sdk_path(path):
+    rel_path = path.split('\\')
+    for index, item in enumerate(rel_path):
+        if item.lower() == 'gamesdk':
+            rel_path = rel_path[index + 1:]
+            break
+    rel_path = '\\'.join(rel_path).split('.')[0]
+    return rel_path
 
 
 ### Callbacks ###
@@ -178,60 +212,102 @@ def helpvc_OnClicked():
     sigen.msg('Will set the Vertex Color display mode for the focused viewport to either RGB or Alpha.', plugin='SoftCry')
 
 
-def syncmathelp_OnClicked():
-    sigen.msg('Sync the selected .mtl multi material with the current Material Library.')
+def synchelp_OnClicked():
+    sigen.msg('''Sync the selected .mtl multi material file.
+If the Material Library exists (checked via name), any missing materials will be created.
+If it doesn't exist, the Library and all its sub-materials will be created.
+If "Make External" is checked the .mtl file will be used as multi-material on export.''')
+
+
+def matlibhelp_OnClicked():
+    sigen.msg('''Set Selected As Active: Sets the selected Library to be the "current"/"active".
+Edit Settings: Edit SoftCry specific MatLib settings (like external MatLibs).
+''')
+
+
+def sync_library(lib, materials, external):
+    non_existent = []
+    for material in materials:
+        corresponding_material = None
+        for simat in lib.Items:
+            if material.name.lower() == simat.Name.lower():
+                corresponding_material = material
+                break
+        if not corresponding_material:
+            non_existent.append(material)
+    for material in non_existent:
+        lib.CreateMaterial('Phong', material.name)
+    xsi.SetCurrentMaterialLibrary(lib)
+    xsi.SoftCryCryifyMaterials()
+    if external:
+        add_matlib_property(lib, external, True)
+    else:
+        add_matlib_property(lib, '', False)
+    return lib
+
+
+def create_library(lib_name, materials, external):
+    lib = xsi.CreateLibrary(lib_name)[0]  # CreateLibrary returns a tuple/array, the first value is the lib.
+    for material in materials:
+        lib.CreateMaterial('Phong', material.name)
+    xsi.SetCurrentMaterialLibrary(lib)
+    xsi.SoftCryCryifyMaterials()
+    if external:
+        add_matlib_property(lib, external, True)
+    else:
+        add_matlib_property(lib, '', False)
+    return lib
+
+
+def get_materials(path):
+    from xml.etree.ElementTree import ElementTree
+    tree = ElementTree(file=path)
+    materials = []
+    for material_node in tree.getroot().find('SubMaterials'):
+        material = SyncMaterial()
+        material.name = material_node.get('Name')
+        material.diffuse = material.color(material_node.get('Diffuse'))
+        material.specular = material.color(material_node.get('Specular'))
+        material.emissive = material.color(material_node.get('Emissive'))
+        if material_node.get('Shininess'):
+            material.shininess = float(material_node.get('Shininess'))
+        material.opacity = float(material_node.get('Opacity'))
+        for tex in material_node.find('Textures'):
+            material.textures[tex.get('Map')] = tex.get('File')
+        materials.append(material)
+    return materials
 
 
 def sync_OnClicked():
-    from xml.etree.ElementTree import ElementTree
+    import os
     ppg = PPG.Inspected(0)
     path = ppg.Parameters('mtlpath').Value
+    lib_name = os.path.basename(path).split('.')[0]
+    make_external = ppg.Parameters('isexternal').Value
+    external = None
+    if make_external:
+        external = get_relative_sdk_path(path)
     if not path:
         return
-    tree = ElementTree(file=path)
-    materials = []
-    for material in tree.getroot().find('SubMaterials'):
-        mat = SyncMaterial()
-        mat.name = material.get('Name')
-        print mat.name
-        mat.diffuse = mat.color(material.get('Diffuse'))
-        mat.specular = mat.color(material.get('Specular'))
-        mat.emissive = mat.color(material.get('Emissive'))
-        mat.shininess = float(material.get('Shininess'))
-        mat.opacity = float(material.get('Opacity'))
-        for tex in material.find('Textures'):
-            mat.textures[tex.get('Map')] = tex.get('File')
-        materials.append(mat)
-    lib = xsi.ActiveProject.ActiveScene.ActiveMaterialLibrary
-    for simat in lib.Items:
-        for mat in materials:
-            print mat.name, simat.Name
-            if mat.name == simat.Name:
-                shader = simat.Shaders(0)
-                color = shader.Parameters('diffuse').Value
-                color.Red = mat.diffuse[0]
-                color.Green = mat.diffuse[1]
-                color.Blue = mat.diffuse[2]
+    libraries = xsi.ActiveProject.ActiveScene.MaterialLibraries
+    for lib in libraries:
+        if lib.Name == lib_name:
+            sync_library(lib, get_materials(path), external)
+            return
+    create_library(lib_name, get_materials(path), external)
 
-                color = shader.Parameters('specular').Value
-                color.Red = mat.specular[0]
-                color.Green = mat.specular[1]
-                color.Blue = mat.specular[2]
 
-                color = shader.Parameters('reflectivity').Value
-                color.Red = mat.emissive[0]
-                color.Green = mat.emissive[1]
-                color.Blue = mat.emissive[2]
-
-                shader.Parameters('shiny').Value = mat.shininess / 255
-
-                color = shader.Parameters('transparency').Value
-                color.Red = mat.opacity
-                color.Green = mat.opacity
-                color.Blue = mat.opacity
-                color.Alpha = mat.opacity
-
-                # Textures
+def edit_OnClicked():
+    ppg = PPG.Inspected(0)
+    lib = ppg.Parameters('matlib').Value
+    if not lib:
+        return
+    lib = xsi.Dictionary.GetObject(lib)
+    prop = get_matlib_property(lib)
+    if prop:
+        xsi.InspectObj(prop)
+    else:
+        xsi.InspectObj(add_matlib_property(lib, '', False))
 
 
 def setmatlib_OnClicked():

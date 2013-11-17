@@ -28,4 +28,4 @@ or download the .ZIP and extract it to <USER>\\Autodesk\\Softimage_20xx\\Addons\
 Links
 ========
 
-Homepage: https://sites.google.com/site/andescp/softcry
+Homepage: http://schlechtwetterfront.github.com/softcry/

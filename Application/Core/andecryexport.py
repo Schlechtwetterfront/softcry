@@ -222,10 +222,19 @@ class Export(andesicore.SIGeneral):
         self.material_man.material_dict = {}
         self.material_man.clip_list = []
         self.material_man.clip_dict = {}
+        lib_is_external = False
+        external_lib_path = ''
+        for p in lib.Properties:
+            if 'SoftCry' in p.Name:
+                lib_is_external = p.Parameters('is_external').Value
+                external_lib_path = p.Parameters('external_matlib').Value
         logging.info('Retrieving materials.')
         for ind, mat in enumerate(lib.Items):
             logging.debug('Converting Material: {0}'.format(mat.FullName))
-            conv = MaterialConverter(mat, ind, lib.Name, self.material_man)
+            if lib_is_external is False:
+                conv = MaterialConverter(mat, ind, lib.Name, self.material_man)
+            else:
+                conv = MaterialConverter(mat, ind, external_lib_path, self.material_man)
             self.material_man.add_material(conv.convert())
         logging.info('Retrieved materials.')
 

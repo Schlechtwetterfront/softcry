@@ -100,6 +100,7 @@ def XSILoadPlugin(in_reg):
     in_reg.RegisterCommand('SoftCryShowRCLog', 'SoftCryShowRCLog')
     in_reg.RegisterCommand('SoftCryTools', 'SoftCryTools')
     in_reg.RegisterCommand('SoftCryCheckVersion', 'SoftCryCheckVersion')
+    in_reg.RegisterCommand('SoftCrySetMatLibOrigin', 'SoftCrySetMatLibOrigin')
 
     in_reg.RegisterEvent('SoftCryStartupEvent', const.siOnStartup)
     in_reg.RegisterTimerEvent('SoftCryDelayedStartupEvent', 0, 1000)
@@ -483,6 +484,9 @@ def SoftCryTools_Execute():
 
     pS.AddParameter3('matlib', const.siString, '')
 
+    pS.AddParameter3('originpath', const.siString, '', '', 0, 0)
+    pS.AddParameter3('isexternal', const.siBool, False, '', 0, 0)
+
 
     mLay = pS.PPGLayout
     mLay.SetAttribute(const.siUILogicFile, get_origin() + '\\Application\\Logic\\tools.py')
@@ -498,53 +502,41 @@ def SoftCryTools_Execute():
     text = mLay.AddStaticText
     spacer = mLay.AddSpacer
 
-    row()
+    mLay.AddTab('Material Library')
 
-    matg = g('Materials', 1)
+    matg = g('Material Library', 1)
     matg.SetAttribute(const.siUIWidthPercentage, 60)
 
     row()
-    mat_phys_special = []
-    for phys_type in MATERIAL_PHYS:
-        mat_phys_special.extend((phys_type, phys_type))
-    enum_ctrl = enum('phystypes', mat_phys_special, 'Physicalization', const.siControlCombo)
-    enum_ctrl.SetAttribute('NoLabel', True)
-
-    physbtn = btn('setphys', 'Set For Selected')
-    #physbtn.SetAttribute(const.siUICX, 105)
-    #spacer(0, 1)
-    #btn('helpsetphys', '?')
-    erow()
-
-    spacer(100, 5)
-
-    row()
-
-    path_ctrl = item('mtlpath', 'File', const.siControlFilePath)
-    path_ctrl.SetAttribute(const.siUINoLabel, 1)
+    path_ctrl = item('mtlpath', 'Material File', const.siControlFilePath)
     path_ctrl.SetAttribute(const.siUIFileFilter, 'File (*.mtl)|*.mtl')
     path_ctrl.SetAttribute(const.siUIOpenFile, True)
     path_ctrl.SetAttribute(const.siUIFileMustExist, True)
-
-    syncb = btn('sync',  'Sync MatLib')
-    syncb.SetAttribute(const.siUIButtonDisable, True)
-    #btn('syncmtlhelp', '?')
+    path_ctrl.SetAttribute(const.siUILabelPercentage, 50)
     erow()
-
-    spacer(100, 5)
 
     row()
-    matlibs = []
-    for material in xsi.ActiveProject.ActiveScene.MaterialLibraries:
-        matlibs.extend((material.Name, material.FullName))
-    filetype = enum('matlib', matlibs, 'Material Library', const.siControlCombo)
-    filetype.SetAttribute('NoLabel', True)
-    btn('setmatlib', 'Set Active MatLib')
+    btn('synchelp', '?')
+    spacer(188, 5)
+    item('isexternal', 'Make External')
+    btn('sync', 'Sync')
     erow()
 
+    matlibs = []
+    for library in xsi.ActiveProject.ActiveScene.MaterialLibraries:
+        matlibs.extend((library.Name, library.FullName))
+    filetype = enum('matlib', matlibs, 'Material Library', const.siControlCombo)
+    filetype.SetAttribute(const.siUILabelPercentage, 50)
+    #text('Used MatLib')
+    row()
+    btn('matlibhelp', '?')
+    spacer(185, 5)
+    btn('edit', 'Edit Settings')
+    btn('setmatlib', 'Set Selected As Active')
+    erow()
     eg()
 
-    g('', 0)
+    mLay.AddTab('Misc')
 
     g('Geometry', 1)
 
@@ -558,36 +550,37 @@ def SoftCryTools_Execute():
 
     eg()
 
-    g('Vertex Colors', 1)
+    row()
+    vcg = g('Vertex Colors', 1)
+    vcg.SetAttribute(const.siUIWidthPercentage, 35)
 
     row()
     b = btn('showrgb', 'Show RGB')
     b.SetAttribute(const.siUICX, 70)
     b = btn('showalpha', 'Show Alpha')
     b.SetAttribute(const.siUICX, 70)
-    spacer(40, 1)
     btn('helpvc', '?')
     erow()
 
     eg()
 
-    eg()
+    g('Materials', 1)
+    row()
+    mat_phys_special = []
+    for phys_type in MATERIAL_PHYS:
+        mat_phys_special.extend((phys_type, phys_type))
+    enum_ctrl = enum('phystypes', mat_phys_special, 'Physicalization', const.siControlCombo)
+    enum_ctrl.SetAttribute('NoLabel', True)
 
+    btn('setphys', 'Set For Selected')
     erow()
-
-    '''row()
-
-    btn('degenerateuvs', 'Degenerate UVs')
-
-    degtext = item('degeneratetxtuv')
-    degtext.SetAttribute('NoLabel', True)
-
-    erow()'''
+    eg()
+    erow()
 
     desk = xsi.Desktop.ActiveLayout
     view = desk.CreateView('Property Panel', 'SoftCryTools')
     view.BeginEdit()
-    view.Resize(500, 135)
+    view.Resize(450, 170)
     view.SetAttributeValue('targetcontent', pS.FullName)
     view.EndEdit()
     return True
