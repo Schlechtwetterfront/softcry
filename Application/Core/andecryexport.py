@@ -167,7 +167,7 @@ class Export(andesicore.SIGeneral):
         options.AddParameter3('ApplySubdivisionToGeometry', const.siBool, False)  # nope.
         options.AddParameter3('Triangulate', const.siBool, True)  # sure.
         options.AddParameter3('ExportTangentsAsVtxColor', const.siBool, False)  # nope.
-        options.AddParameter3('ShapeAnim', const.siInt4, 1)  # maybe in the future.
+        options.AddParameter3('ShapeAnim', const.siInt4, 1)  #
         options.AddParameter3('PlotAnimation', const.siBool, False)  # maybe.
         options.AddParameter3('PlotNonFCurveActionSources', const.siBool, False)  # maybe?
         options.AddParameter3('PlotStartFrame', const.siInt4, 1)  # need to set that from playcontrol.

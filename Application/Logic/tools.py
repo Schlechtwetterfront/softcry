@@ -1,8 +1,14 @@
-xsi = Application
-ui = XSIUIToolkit
-import andesicore
+try:
+    xsi = Application
+    ui = XSIUIToolkit
+except NameError:
+    print 'Not loaded from inside XSI.'
+try:
+    import andesicore
+    sigen = andesicore.SIGeneral()
+except ImportError:
+    print 'Cannot import andesicore, PATH seemingly not including this directory.'
 from win32com.client import constants as const
-sigen = andesicore.SIGeneral()
 
 
 class SyncMaterial(object):
@@ -83,7 +89,7 @@ def segments(p):
 
 def set_vc_display(mode):
     mode = (1 if mode == 'rgb' else 2)
-    viewman = Application.Desktop.ActiveLayout.Views('vm')
+    viewman = xsi.Desktop.ActiveLayout.Views('vm')
     focused = viewman.GetAttributeValue('focusedviewport')
     cam_type = viewman.GetAttributeValue('activecamera:{0}'.format(focused))
     if cam_type == 'User':
