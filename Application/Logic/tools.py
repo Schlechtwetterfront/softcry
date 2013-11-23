@@ -122,9 +122,11 @@ def add_matlib_property(matlib, extpath, isext=True):
 
 
 def get_relative_sdk_path(path):
+    import crycore
+    gamefolder_name = crycore.load_settings(xsi)['gamefolder_name']
     rel_path = path.split('\\')
     for index, item in enumerate(rel_path):
-        if item.lower() == 'gamesdk':
+        if item.lower() == gamefolder_name.lower():
             rel_path = rel_path[index + 1:]
             break
     rel_path = '\\'.join(rel_path).split('.')[0]
