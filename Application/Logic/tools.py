@@ -146,7 +146,7 @@ def finddegenerates_OnClicked():
         progress_bar.set(faces.Count, 'Iterating faces...')
         for index, face in enumerate(faces):
             if face.Points.Count > 4:
-                sigen.msg('Polygon {0} has more than 4 sides.'.format(face.Index))
+                sigen.msg('Polygon {0} has more than 4 sides.'.format(face.Index), plugin='SoftCry')
                 progress_bar.hide()
                 return
             points = []
@@ -174,7 +174,7 @@ def degenerateuvs_OnClicked():
         geo = item.ActivePrimitive.GetGeometry2(0)
         for face in geo.Facets:
             if face.Samples.Count > 4:
-                sigen.msg('Polygon {0} has more than 4 sides.'.format(face.Index))
+                sigen.msg('Polygon {0} has more than 4 sides.'.format(face.Index), plugin='SoftCry')
                 return
             samples = []
             for sample in face.Points:
@@ -222,13 +222,13 @@ def synchelp_OnClicked():
     sigen.msg('''Sync the selected .mtl multi material file.
 If the Material Library exists (checked via name), any missing materials will be created.
 If it doesn't exist, the Library and all its sub-materials will be created.
-If "Make External" is checked the .mtl file will be used as multi-material on export.''')
+If "Make External" is checked the .mtl file will be used as multi-material on export.''', plugin='SoftCry')
 
 
 def matlibhelp_OnClicked():
     sigen.msg('''Set Selected As Active: Sets the selected Library to be the "current"/"active".
 Edit Settings: Edit SoftCry specific MatLib settings (like external MatLibs).
-''')
+''', plugin='SoftCry')
 
 
 def sync_library(lib, materials, external):

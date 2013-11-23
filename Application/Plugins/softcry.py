@@ -1,7 +1,8 @@
 # Code Copyright (C) Ande 2012
 import win32com.client
 from win32com.client import constants as const
-import sys, os
+import sys
+import os
 from datetime import datetime as dt
 
 xsi = Application
@@ -48,19 +49,26 @@ def get_origin():
 
 
 def check_version(quiet=False):
+    add_to_path()
+    import requests as req
+    import webbrowser
+    import crycore
+    config = crycore.load_settings(xsi)
+    try:
+        timeout = config['check_version_timeout']
+    except KeyError:
+        crycore.default_settings(xsi)
+        config = crycore.load_settings(xsi)
+        timeout = config['check_version_timeout']
     pb = uitk.ProgressBar
     pb.Caption = 'Checking SoftCry Version...'
     pb.Visible = True
     pb.Maximum = 1
-    add_to_path()
-    import requests as req
-    import webbrowser
+
     origin = get_origin()
     verdir = os.path.abspath(os.path.join(origin, 'softcry.ver'))
     with open(verdir, 'r') as fh:
         local_major, local_minor, local_build = fh.readline().split('.')
-    prefs = xsi.Preferences
-    timeout = prefs.GetPreferenceValue('SoftCry.timeout')
     try:
         latest = req.get('http://raw.github.com/Schlechtwetterfront/softcry/master/softcry.ver', timeout=timeout)
     except (req.ConnectionError, req.Timeout):
@@ -101,6 +109,7 @@ def XSILoadPlugin(in_reg):
     in_reg.RegisterCommand('SoftCryTools', 'SoftCryTools')
     in_reg.RegisterCommand('SoftCryCheckVersion', 'SoftCryCheckVersion')
     in_reg.RegisterCommand('SoftCrySetMatLibOrigin', 'SoftCrySetMatLibOrigin')
+    in_reg.RegisterCommand('SoftCrySettings', 'SoftCrySettings')
 
     in_reg.RegisterEvent('SoftCryStartupEvent', const.siOnStartup)
     in_reg.RegisterTimerEvent('SoftCryDelayedStartupEvent', 0, 1000)
@@ -127,16 +136,16 @@ def install_preferences():
 
 
 def SoftCryDelayedStartupEvent_OnEvent(in_ctxt):
-    prefs = xsi.Preferences
-    if not prefs.Categories('SoftCry'):
-        xsi.LogMessage('No prefs.')
-        install_preferences()
-    if prefs.Categories('SoftCry'):
-        do_check = prefs.GetPreferenceValue('SoftCry.check_version_on_startup')
-        print 'do_check:', do_check, type(do_check)
-        if do_check == 'False':
-            return False
-    check_version(True)
+    add_to_path()
+    import crycore
+    config = crycore.load_settings(xsi)
+    try:
+        check = config['check_version_on_startup']
+    except KeyError:
+        crycore.default_settings(xsi)
+        check = crycore.load_settings(xsi)['check_version_on_startup']
+    if check:
+        check_version(True)
     return False
 
 
@@ -144,13 +153,14 @@ def SoftCryDelayedStartupEvent_OnEvent(in_ctxt):
 def SoftCry_Init(in_ctxt):
     oMenu = in_ctxt.Source
     oMenu.AddCommandItem('Export...', 'SoftCryExport')
-    oMenu.AddCommandItem('Edit Clips...', 'SoftCryEditAnimClips')
+    oMenu.AddCommandItem('Edit Animation Clips...', 'SoftCryEditAnimClips')
     oMenu.AddCommandItem('Cryify Materials', 'SoftCryCryifyMaterials')
     oMenu.AddCommandItem('Toolbox...', 'SoftCryTools')
     sub_menu = win32com.client.Dispatch(oMenu.AddItem('Misc', const.siMenuItemSubmenu))
     sub_menu.AddCommandItem('Show Export Log', 'SoftCryShowLog')
     sub_menu.AddCommandItem('Show RC Log', 'SoftCryShowRCLog')
     sub_menu.AddCommandItem('Check Version', 'SoftCryCheckVersion')
+    sub_menu.AddCommandItem('Settings...', 'SoftCrySettings')
     return True
 
 
@@ -173,7 +183,6 @@ def SoftCryExport_Execute():
     try:
         pS = xsi.ActiveSceneRoot.AddProperty('CustomProperty', False, 'SoftCryExport')
         pS.AddParameter3('path', const.siString, config['path'])
-        pS.AddParameter3('rcpath', const.siString, config['rcpath'])
         pS.AddParameter3('customnormals', const.siBool, config['customnormals'], '', 0, 0)
         pS.AddParameter3('donotmerge', const.siBool, config['donotmerge'], '', 0, 0)
         pS.AddParameter3('filetype', const.siString, config['filetype'], '', 0, 0)
@@ -216,9 +225,9 @@ def SoftCryExport_Execute():
     path_ctrl.SetAttribute(const.siUIOpenFile, False)
     path_ctrl.SetAttribute(const.siUIFileMustExist, False)
 
-    texPathI = mLay.AddItem('rcpath', 'Resource Compiler', const.siControlFolder)
+    '''texPathI = mLay.AddItem('rcpath', 'Resource Compiler', const.siControlFolder)
     texPathI.SetAttribute(const.siUINoLabel, 1)
-    texPathI.SetAttribute(const.siUIWidthPercentage, 55)
+    texPathI.SetAttribute(const.siUIWidthPercentage, 55)'''
 
 
     exgrp = grp('Export', 1)
@@ -268,7 +277,7 @@ def SoftCryExport_Execute():
     desk = xsi.Desktop.ActiveLayout
     view = desk.CreateView('Property Panel', 'SoftCryExport')
     view.BeginEdit()
-    view.Resize(400, 190)
+    view.Resize(400, 165)
     view.SetAttributeValue('targetcontent', pS.FullName)
     view.EndEdit()
     return True
@@ -595,4 +604,86 @@ def SoftCryCheckVersion_Init(in_ctxt):
 
 def SoftCryCheckVersion_Execute():
     check_version()
+    return True
+
+
+def SoftCrySettings_Init(context):
+    command = context.Source
+    command.Description = ''
+    command.ReturnValue = True
+    return True
+
+
+def SoftCrySettings_Execute():
+    add_to_path()
+    import crycore
+    reload(crycore)
+    config = crycore.load_settings(xsi)
+
+    for prop in xsi.ActiveSceneRoot.Properties:
+        if prop.Name == 'SoftCrySettings':
+            xsi.DeleteObj('SoftCrySettings')
+    try:
+        pS = xsi.ActiveSceneRoot.AddProperty('CustomProperty', False, 'SoftCrySettings')
+        pS.AddParameter3('rcpath', const.siString, config['rcpath'])
+        pS.AddParameter3('gamefolder_name', const.siString, config['gamefolder_name'], '', '', 0, 0)
+        pS.AddParameter3('check_version_on_startup', const.siBool, config['check_version_on_startup'], 0, 1, 0, 0)
+        pS.AddParameter3('check_version_timeout', const.siDouble, config['check_version_timeout'], 0, 10, 0, 0)
+    except KeyError:
+        crycore.default_settings(xsi)
+        xsi.SoftCryExport()
+        return
+
+    mLay = pS.PPGLayout
+    mLay.SetAttribute(const.siUILogicFile, get_origin() + '\\Application\\Logic\\settings.py')
+    mLay.Language = 'pythonscript'
+
+    btn = mLay.AddButton
+    item = mLay.AddItem
+    r = mLay.AddRow
+    er = mLay.EndRow
+    enum = mLay.AddEnumControl
+    text = mLay.AddStaticText
+    g = mLay.AddGroup
+    eg = mLay.EndGroup
+    tab = mLay.AddTab
+    spacer = mLay.AddSpacer
+
+    g('Settings')
+
+    path_ctrl = item('rcpath', 'RC Path', const.siControlFolder)
+    path_ctrl.SetAttribute(const.siUILabelPercentage, 70)
+    r()
+    folder_ctrl = item('gamefolder_name', 'Game Folder Name')
+    folder_ctrl.SetAttribute(const.siUILabelPercentage, 80)
+    help_btn = btn('helpgamefolder', '?')
+    help_btn.SetAttribute(const.siUICX, 40)
+    er()
+    spacer(100, 5)
+    r()
+    item('check_version_on_startup', 'Check Version on Startup')
+    item('check_version_timeout', 'Timeout')
+    er()
+
+    r()
+    spacer(190, 5)
+    reload_btn = btn('reload', 'Reload')
+    reload_btn.SetAttribute(const.siUICX, 60)
+    reload_btn.SetAttribute(const.siUICY, 22)
+    def_btn = btn('default', 'Default')
+    def_btn.SetAttribute(const.siUICX, 60)
+    def_btn.SetAttribute(const.siUICY, 22)
+    save_btn = btn('save', 'Save')
+    save_btn.SetAttribute(const.siUICX, 60)
+    save_btn.SetAttribute(const.siUICY, 22)
+    er()
+
+    eg()
+
+    desk = xsi.Desktop.ActiveLayout
+    view = desk.CreateView('Property Panel', 'SoftCrySettings')
+    view.BeginEdit()
+    view.Resize(400, 150)
+    view.SetAttributeValue('targetcontent', pS.FullName)
+    view.EndEdit()
     return True

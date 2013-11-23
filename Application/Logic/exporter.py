@@ -9,9 +9,8 @@ xsi = Application
 
 def Export_OnClicked():
     params = PPG.Inspected(0).Parameters
-    config = crycore.get_default_settings()
+    config = crycore.load_settings(xsi)
     config['path'] = params('path').Value
-    config['rcpath'] = params('rcpath').Value
     config['customnormals'] = params('customnormals').Value
     config['donotmerge'] = params('donotmerge').Value
     config['filetype'] = params('filetype').Value

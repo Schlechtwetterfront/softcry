@@ -44,6 +44,9 @@ def get_default_settings():
         'usespaces': False,
         'keyforspace': '-',
         'f32': False,
+        'gamefolder_name': 'GameSDK',
+        'check_version_on_startup': True,
+        'check_version_timeout': 2,
     }
     return sett
 
