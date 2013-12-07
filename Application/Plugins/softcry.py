@@ -19,13 +19,13 @@ MATERIAL_PHYS = ('physDefault',  # default collision
 OLD_VERSION_MSG = '''You are using an old version of SoftCry ({0}.{1}.{2}), please update to the latest ({3}.{4}.{5}).
 Go to SoftCry download page?
 
-Note: You can disable the version check in Preferences>Custom>SoftCry'''
+Note: You can disable the version check in SoftCry>Misc>Settings'''
 
 UP_TO_DATE_MSG = '''Build up to date (local: {0}.{1}.{2}, remote: {3}.{4}.{5}).
 
-Note: You can disable the version check in Preferences>Custom>SoftCry'''
+Note: You can disable the startup version check in SoftCry>Misc>Settings.'''
 
-CHECK_VERSION_ERROR_MSG = 'Could not connect to github or timed out, version check not successful. Check Preferences>Custom>SoftCry>timeout.'
+CHECK_VERSION_ERROR_MSG = 'Could not connect to github or timed out, version check not successful. Check SoftCry>Misc>Settings>timeout.'
 
 
 def add_to_path():

@@ -1,7 +1,12 @@
 #########################################################
 #####                 andesicore                    #####
-#####         code copyright (C) Ande 2012          #####
-#####    https://sites.google.com/site/andescp/     #####
+#####                                               #####
+#####             XSI utility classes               #####
+#####                                               #####
+#####             code copyright (C)                #####
+#####            Benedikt Schatz 2013               #####
+#####                                               #####
+#####    http://schlechtwetterfront.github.io/      #####
 #########################################################
 from win32com.client import constants as const
 import win32com
@@ -9,6 +14,56 @@ STR_CODEC = 'utf-8'
 xsi = win32com.client.Dispatch('XSI.Application')
 xsiui = win32com.client.Dispatch('XSI.UIToolkit')
 xsimath = win32com.client.Dispatch('XSI.Math')
+
+
+class SICoreError(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __repr__(self):
+        return 'SICoreError: {0}'.format(self.value)
+
+
+class Softimage(object):
+    @staticmethod
+    def get_objects(name):
+        xsifact = win32com.client.Dispatch('XSI.Factory')
+        collection = xsifact.CreateObject('XSI.Collection')
+        collection.items = name
+        if collection.Count > 0:
+            return list(collection)
+        return ()
+
+    @staticmethod
+    def get_object(name):
+        try:
+            return xsi.Dictionary.GetObject(name)
+        except win32com.client.pythoncom.com_error:
+            print 'COM ERROR'
+            return None
+
+    @staticmethod
+    def get_plugin_origin(plugin_name):
+        xsi = win32com.client.Dispatch('XSI.Application')
+        plugins = xsi.Plugins
+        for plugin in plugins:
+            if plugin.Name == plugin_name:
+                return plugin.OriginPath[:-20]
+
+    @staticmethod
+    def msg(self, message, msg_type=const.siMsgOkOnly, caption='Information'):
+        return xsiui.MsgBox(message, msg_type, caption)
+
+    @staticmethod
+    def get_all_children(self, root):
+        '''Recursively adds children to a list.'''
+        children = []
+        children.append(root)
+        if root.Children(0):
+            chldrn = list(root.Children)
+            for child in chldrn:
+                children.extend(self.get_all_children(child))
+        return children
 
 
 class SIScene(object):
@@ -42,6 +97,15 @@ class SIModel(object):
         for cls in sample:
             props = cls.Properties.Filter('uvspace')
             return props
+
+    def get_normal_props(self):
+        clusters = self.geo.Clusters.Filter('sample')
+        for cluster in clusters:
+            return cluster.Properties.Filter('normal')
+
+    def set_normals(self, index, normals):
+        prop = self.get_normal_props()[index]
+        prop.Elements.Array = normals
 
     def get_envelope_props(self):
         pnt_clusters = self.geo.Clusters.Filter('pnt')

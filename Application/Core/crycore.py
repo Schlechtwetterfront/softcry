@@ -34,7 +34,7 @@ def get_default_settings():
         'donotmerge': True,
         'path': 'C:\\Users\\administrator\\Documents\\CE_353\\GameSDK\\Objects\\xxx.dae',
         'customnormals': True,
-        'filetype': 'cgf',  # cgf | cgaanm | chrcaf
+        'filetype': 'cgf',  # cgf | cgaanm | chrcaf | skin
         'rcpath': 'C:\\Users\\administrator\\Documents\\CE_353\\bin32\\rc\\',
         'unit': 'meter',  # meter | centimeter
         'batch': False,
@@ -52,6 +52,7 @@ def get_default_settings():
 
 
 def default_settings(xsi):
+    print 'Defaulted SoftCry settings.'
     sett = get_default_settings()
     path = os.path.join(get_origin(xsi), 'Resources', 'settings')
     with open(path, 'w') as fh:

@@ -52,8 +52,8 @@ class MaterialConverter(andesicore.SIMaterial):
         self.crymat.ports['index_of_refraction'] = self.get_value('index_of_refraction')
         self.crymat.ports['normal'] = self.get_normal()
         self.crymat.old_name = self.simat.Name
-        self.crymat.name = '{0}__{1}__{2}__{3}'.format(self.libname, self.index, self.simat.Name, self.crymat.phys)
-        self.crymat.effect_name = '{0}-{1}-{2}-effect'.format(self.libname, self.index, self.simat.Name)
+        self.crymat.name = '{0}__{1:0>2}__{2}__{3}'.format(self.libname, self.index, self.simat.Name, self.crymat.phys)
+        self.crymat.effect_name = '{0}-{1:0>2}-{2}-effect'.format(self.libname, self.index, self.simat.Name)
         return self.crymat
 
     def get_port(self, port_name):
