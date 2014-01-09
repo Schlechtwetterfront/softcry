@@ -140,10 +140,10 @@ class CryColor(CrySource):
 class CryImageClip(CrySource):
     type = 'ImageSource'
 
-    def __init__(self, imagename):
-        self.name = imagename.split('\\')[-1]
+    def __init__(self, path):
+        self.name = path.split('\\')[-1]
         print 'CryImageClip name: ', self.name
-        self.image = imagename
+        self.image = path
         print 'CryImageClip image: ', self.image
 
     def get(self):

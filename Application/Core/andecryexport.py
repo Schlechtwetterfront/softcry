@@ -31,7 +31,8 @@ logging.basicConfig(format='%(levelname)s (%(lineno)d, %(funcName)s): %(message)
 
 
 class MaterialConverter(andesicore.SIMaterial):
-    def __init__(self, simat, index, libname, matman):
+    def __init__(self, simat, index, libname, matman, export):
+        self.export = export
         self.matman = matman
         self.simat = simat
         self.crymat = crydaemon.CryMaterial()
@@ -72,9 +73,19 @@ class MaterialConverter(andesicore.SIMaterial):
         tex_source = img.ImageClips(0)
         if not tex_source:
             return crydaemon.CryColor(0, 0, 0, 0)
-        relative_filepath = tex_source.Source.Parameters('FileName').Value
+        filepath = tex_source.Source.Parameters('FileName').Value
+        relative_filepath = self.get_relative_path(filepath)
         img = crydaemon.CryImageClip(relative_filepath)
         return self.matman.add_clip(img)
+
+    def get_relative_path(self, path):
+        folder_name = self.export.config['gamefolder_name']
+        relative = path
+        if folder_name in path:
+            _, relative = path.split(folder_name)
+            if relative.startswith('\\') or relative.startswith('/'):
+                relative = relative[1:]
+        return relative
 
     def get_value(self, name):
         shader = self.simat.Shaders(0)
@@ -232,9 +243,9 @@ class Export(andesicore.SIGeneral):
         for ind, mat in enumerate(lib.Items):
             logging.debug('Converting Material: {0}'.format(mat.FullName))
             if lib_is_external is False:
-                conv = MaterialConverter(mat, ind, lib.Name, self.material_man)
+                conv = MaterialConverter(mat, ind, lib.Name, self.material_man, self)
             else:
-                conv = MaterialConverter(mat, ind, external_lib_path, self.material_man)
+                conv = MaterialConverter(mat, ind, external_lib_path, self.material_man, self)
             self.material_man.add_material(conv.convert())
         logging.info('Retrieved materials.')
 
