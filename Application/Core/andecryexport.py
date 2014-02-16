@@ -82,7 +82,8 @@ class MaterialConverter(andesicore.SIMaterial):
         folder_name = self.export.config['gamefolder_name']
         relative = path
         if folder_name in path:
-            _, relative = path.split(folder_name)
+            path_parts = path.split(folder_name)
+            relative = path_parts[-1]
             if relative.startswith('\\') or relative.startswith('/'):
                 relative = relative[1:]
         return relative
