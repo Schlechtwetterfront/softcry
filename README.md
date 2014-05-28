@@ -1,6 +1,8 @@
 SoftCry
 ========
 
+***Note:* This is discontinued with the release of CE-as-a-service (3.6+).**
+
 CryENGINE 3 exporter for Softimage.
 
 * Intuitive workflow for exporting.
