@@ -1,0 +1,201 @@
+<!doctype html>
+<html>
+	<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/pygment_trac.css">
+    <link rel="stylesheet" href="../css/andesimple.css">
+    <script src="../js/respond.js"></script>
+    <script src="../js/jquery-1.11.0.min.js"></script>
+    <link rel="icon" type="image/png" href="../favicon.png"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+    <title>SoftCry</title>
+</head>
+	<body>
+		<div class="container">
+		
+
+<div class="sidebar">
+	<sidebar_title>SoftCry</sidebar_title>
+
+    <div class="hr_dark"></div>
+    <category_label>Downloads</category_label><br>
+    
+        <a class="rectangle_button" href="https://github.com/Schlechtwetterfront/softcry/releases">Releases</a>
+    
+
+    <div class="hr_dark"></div>
+    <category_label>General Info</category_label><br>
+    
+        <a class="rectangle_button" href="#main_info">Main Info</a>
+    
+        <a class="rectangle_button" href="#download_installation">Download & Installation</a>
+    
+
+    <div class="hr_dark"></div>
+    <category_label>Other Resources</category_label><br>
+    
+        <a class="rectangle_button" href="https://github.com/Schlechtwetterfront/softcry">View on GitHub</a>
+    
+        <a class="rectangle_button" href="http://www.cryengine.com/community/viewtopic.php?f=315&t=102978">View Thread on CRYDEV</a>
+    
+        <a class="rectangle_button" href="http://www.youtube.com/watch?v=2Rt3B8h5EvE">Hardbody Animations (Video)</a>
+    
+
+    <div class="hr_dark"></div>
+    <category_label>Personal</category_label><br>
+    
+        <a class="rectangle_button" href="http://schlechtwetterfront.github.io/">Schlechtwetterfront</a>
+    
+
+	<script type="text/javascript">
+		var count = 0;
+
+		count =  $("a.rectangle_button").length;
+
+		var height = parseInt($("a.rectangle_button").css("height")) * count + $("category_label").length * parseInt($("category_label").css("height")) + parseInt($("sidebar_title").css("height"));
+		$("div .sidebar").css("height", height + 10);
+	</script>
+</div>
+		
+
+<div class="content">
+	
+		<div class="section">
+			<a name="main_info"></a>
+			
+		<a class="toggle_collapse" content-id="main_info_content" id="main_info_content_start" starts-collapsed="False">Collapse</a>
+	 <h2>Main Info</h2> 
+				<div id="main_info_content">
+				<p>CryENGINE 3 exporter for Softimage.  </p>
+<ul>
+<li>Intuitive workflow for exporting.</li>
+<li>No special setup required for a basic export.</li>
+<li>CryEngine specific material properties directly interface with Softimage materials, so there is no restriction on the type of shaders/materials you can use in XSI.</li>
+<li>Batch export.</li>
+<li>Support for different grid-units (1 unit = 1cm or 1m).</li>
+<li>Animation export + straight forward animation clip editor.</li>
+</ul>
+				
+		<div></div>
+	
+				</div>
+			<div class="hr"></div>
+		</div>
+	
+		<div class="section">
+			<a name="download_installation"></a>
+			
+		<a class="toggle_collapse" content-id="download_installation_content" id="download_installation_content_start" starts-collapsed="False">Collapse</a>
+	 <h2>Download &amp; Installation</h2> 
+				<div id="download_installation_content">
+				<p>Check the sidebar for a link to the releases page on GitHub.</p>
+<p>To install SoftCry, unzip the downloaded archive into<br />
+<strong>C:/users/%user%/Autodesk/Softimage_%version%/Addons/</strong><br />
+OR<br />
+<strong>C:/users/%user%/Softimage/Softimage_%version%/Addons/</strong>.<br />
+Make sure you use this path and not the factory addon path.  </p>
+<p>If you have any Softimage version up to (and including) 2010 you need to install
+<a href="http://www.python.org/ftp/python/2.6.6/python-2.6.6.msi">python</a>
+and
+<a href="http://sourceforge.net/projects/pywin32/files/pywin32/Build%20217/pywin32-217.win32-py2.6.exe/download">pywin32</a>.
+If python and pywin32 was installed correctly it should look something like
+<a href="installed_python.jpg">this</a>.  </p>
+				
+		<div></div>
+	
+				</div>
+			<div class="hr"></div>
+		</div>
+	
+</div>
+		</div>
+		<script type="text/javascript">
+			function shadeBlend(p,c0,c1) {
+    var n=p<0?p*-1:p,u=Math.round,w=parseInt;
+    if(c0.length>7){
+        var f=c0.split(","),t=(c1?c1:p<0?"rgb(0,0,0)":"rgb(255,255,255)").split(","),R=w(f[0].slice(4)),G=w(f[1]),B=w(f[2]);
+        return "rgb("+(u((w(t[0].slice(4))-R)*n)+R)+","+(u((w(t[1])-G)*n)+G)+","+(u((w(t[2])-B)*n)+B)+")"
+    }else{
+        var f=w(c0.slice(1),16),t=w((c1?c1:p<0?"#000000":"#FFFFFF").slice(1),16),R1=f>>16,G1=f>>8&0x00FF,B1=f&0x0000FF;
+        return "#"+(0x1000000+(u(((t>>16)-R1)*n)+R1)*0x10000+(u(((t>>8&0x00FF)-G1)*n)+G1)*0x100+(u(((t&0x0000FF)-B1)*n)+B1)).toString(16).slice(1)
+    }
+}
+
+var colors = [
+    "#ff7676", // reddish
+    "#8d76ff", // darker violet
+    "#d77f64", // brighter red
+    "#919ddb", // brighter blue
+    "#7cc67c", // green
+];
+
+// Choose random hover color for all elments.
+var box_hover_color = colors[Math.floor(Math.random() * colors.length)];
+
+var box_darkened_color = shadeBlend(-0.5, box_hover_color);
+
+var box_brightened_color = shadeBlend(0.5, box_hover_color);
+
+var box_normal_color = "#252525";
+
+$("div.content a").css({"color": box_hover_color, "border-bottom": "1px dotted " + box_hover_color});
+$("div.content a").hover(
+	function() {
+		$(this).css({"color": box_brightened_color,
+					"border-bottom": "1px solid " + box_brightened_color});
+	},
+	function() {
+		$(this).css({"color": box_hover_color,
+					"border-bottom": "1px dotted " + box_hover_color,
+					"text-decoration": "none"});
+	});
+
+			$("a.toggle_collapse").click(function () {
+    var header = $(this);
+    var content = $("#" + $(this).attr("content-id"));
+
+    $(content).slideToggle(250, function () {
+
+        header.text(function () {
+
+            return $(content).is(":visible") ? "Collapse" : "Expand";
+        });
+    });
+
+});
+
+$("a.toggle_collapse_end").click(function () {
+    var header = $(this);
+    var content_text = "#" + $(this).attr("content-id");
+    var content = $("#" + $(this).attr("content-id"));
+
+    $(content).slideToggle(250, function () {
+        $(content_text + "_start").text(function () {
+            return $(content).is(":visible") ? "Collapse" : "Expand";
+        })
+    });
+
+});
+
+$("a.toggle_collapse").each(function () {
+    var header = $(this);
+    var content = $("#" + $(this).attr("content-id"));
+
+    if ($(this).attr("starts-collapsed") == "True") {
+        $(content).slideToggle(0, function () {
+
+            header.text(function () {
+
+                return $(content).is(":visible") ? "Collapse" : "Expand";
+            });
+        });
+    }
+});
+
+			$("div .sidebar").css("background-color", box_hover_color);
+		</script>
+	</body>
+</html>
