@@ -4,12 +4,11 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <link rel="stylesheet" href="../css/styles.css">
-    <link rel="stylesheet" href="../css/pygment_trac.css">
     <link rel="stylesheet" href="../css/andesimple.css">
     <script src="../js/respond.js"></script>
     <script src="../js/jquery-1.11.0.min.js"></script>
     <link rel="icon" type="image/png" href="../favicon.png"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>SoftCry</title>
 </head>
@@ -19,44 +18,48 @@
 
 <div class="sidebar">
 	<sidebar_title>SoftCry</sidebar_title>
-
-    <div class="hr_dark"></div>
-    <category_label>Downloads</category_label><br>
-    
-        <a class="rectangle_button" href="https://github.com/Schlechtwetterfront/softcry/releases">Releases</a>
-    
-
-    <div class="hr_dark"></div>
-    <category_label>General Info</category_label><br>
-    
-        <a class="rectangle_button" href="#main_info">Main Info</a>
-    
-        <a class="rectangle_button" href="#download_installation">Download & Installation</a>
-    
-
-    <div class="hr_dark"></div>
-    <category_label>Other Resources</category_label><br>
-    
-        <a class="rectangle_button" href="https://github.com/Schlechtwetterfront/softcry">View on GitHub</a>
-    
-        <a class="rectangle_button" href="http://www.cryengine.com/community/viewtopic.php?f=315&t=102978">View Thread on CRYDEV</a>
-    
-        <a class="rectangle_button" href="http://www.youtube.com/watch?v=2Rt3B8h5EvE">Hardbody Animations (Video)</a>
-    
-
-    <div class="hr_dark"></div>
-    <category_label>Personal</category_label><br>
-    
-        <a class="rectangle_button" href="http://schlechtwetterfront.github.io/">Schlechtwetterfront</a>
-    
-
+	<div class="hr_dark"></div>
+	<div class="sidebar-content-scrollable">
+	
+	    <category_label>Downloads</category_label><br>
+	    
+	        <a class="rectangle_button" href="https://github.com/Schlechtwetterfront/softcry/releases">Releases</a>
+	    
+	    <div class="hr_dark"></div>
+	
+	    <category_label>General Info</category_label><br>
+	    
+	        <a class="rectangle_button" href="#main_info">Main Info</a>
+	    
+	        <a class="rectangle_button" href="#download_installation">Download & Installation</a>
+	    
+	    <div class="hr_dark"></div>
+	
+	    <category_label>Other Resources</category_label><br>
+	    
+	        <a class="rectangle_button" href="https://github.com/Schlechtwetterfront/softcry">View on GitHub</a>
+	    
+	        <a class="rectangle_button" href="http://www.cryengine.com/community/viewtopic.php?f=315&t=102978">View Thread on CRYDEV</a>
+	    
+	        <a class="rectangle_button" href="http://www.youtube.com/watch?v=2Rt3B8h5EvE">Hardbody Animations (Video)</a>
+	    
+	    <div class="hr_dark"></div>
+	
+	    <category_label>Personal</category_label><br>
+	    
+	        <a class="rectangle_button" href="http://schlechtwetterfront.github.io/">Schlechtwetterfront</a>
+	    
+	    <div class="hr_dark"></div>
+	
+	</div>
 	<script type="text/javascript">
 		var count = 0;
 
 		count =  $("a.rectangle_button").length;
 
 		var height = parseInt($("a.rectangle_button").css("height")) * count + $("category_label").length * parseInt($("category_label").css("height")) + parseInt($("sidebar_title").css("height"));
-		$("div .sidebar").css("height", height + 10);
+		// $("div .sidebar").css("height", height + 10);
+		// $("div .sidebar").css("max-height", height + 10);
 	</script>
 </div>
 		
