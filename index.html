@@ -69,10 +69,13 @@
 	
 		<div class="section">
 			<a name="main_info"></a>
-			
+				<div>
+					<div class="section-header">Main Info</div>
+					
 		<a class="toggle_collapse" content-id="main_info_content" id="main_info_content_start" starts-collapsed="False">Collapse</a>
-	 <h2>Main Info</h2> 
-				<div id="main_info_content">
+	
+				</div>
+				<div id="main_info_content" class="section-content">
 				<p>CryENGINE 3 exporter for Softimage.  </p>
 <ul>
 <li>Intuitive workflow for exporting.</li>
@@ -91,10 +94,13 @@
 	
 		<div class="section">
 			<a name="download_installation"></a>
-			
+				<div>
+					<div class="section-header">Download & Installation</div>
+					
 		<a class="toggle_collapse" content-id="download_installation_content" id="download_installation_content_start" starts-collapsed="False">Collapse</a>
-	 <h2>Download &amp; Installation</h2> 
-				<div id="download_installation_content">
+	
+				</div>
+				<div id="download_installation_content" class="section-content">
 				<p>Check the sidebar for a link to the releases page on GitHub.</p>
 <p>To install SoftCry, unzip the downloaded archive into<br />
 <strong>C:/users/%user%/Autodesk/Softimage_%version%/Addons/</strong><br />
@@ -158,7 +164,35 @@ $("div.content a").hover(
 					"text-decoration": "none"});
 	});
 
-			$("a.toggle_collapse").click(function () {
+			function slideToggleContent(id) {
+    if (id.substr(0, 1) != "#") {
+        id = "#" + id;
+    }
+    var content = id + "_content";
+
+    $(content).slideToggle(250, function () {
+        $(content + "_start").text(function () {
+            return $(content).is(":visible") ? "Collapse" : "Expand";
+        })
+    });
+}
+
+function showContent(id) {
+    if (id.substr(0, 1) != "#") {
+        id = "#" + id;
+    }
+    var content = id + "_content";
+    if ($(content).is(":visible")) {
+        return;
+    }
+    $(content).slideToggle(250, function () {
+        $(content + "_start").text(function () {
+            return $(content).is(":visible") ? "Collapse" : "Expand";
+        })
+    });
+}
+
+$("a.toggle_collapse").click(function () {
     var header = $(this);
     var content = $("#" + $(this).attr("content-id"));
 
@@ -197,6 +231,21 @@ $("a.toggle_collapse").each(function () {
                 return $(content).is(":visible") ? "Collapse" : "Expand";
             });
         });
+    }
+});
+
+
+$("a.rectangle_button").click(function() {
+    var id = $(this).attr("href");
+    showContent(id);
+});
+
+
+$(document).ready(function () {
+    var parts = window.location.href.split("#");
+    if(parts.length > 1) {
+       var id = parts[ parts.length-1 ];
+       showContent(id);
     }
 });
 
