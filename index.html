@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="../css/schlechtwetterfront_light.css">
     <script src="../js/respond.js"></script>
     <script src="../js/jquery-1.11.0.min.js"></script>
+    <script src="../js/schlechtwetterfront_visual.js"></script>
+    <script src="../js/schlechtwetterfront_functional.js"></script>
     <link rel="icon" type="image/png" href="../favicon.png"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -31,7 +33,7 @@
 	
 	    <category_label>General Info</category_label><br>
 	    
-	        <a class="rectangle_button" href="#main_info">Main Info</a>
+	        <a class="rectangle_button" href="#overview">Overview</a>
 	    
 	        <a class="rectangle_button" href="#download_installation">Download & Installation</a>
 	    
@@ -69,14 +71,14 @@
 <div class="content">
 	
 		<div class="section">
-			<a name="main_info"></a>
+			<a name="overview"></a>
 				<div>
-					<div class="section-header">Main Info</div>
+					<div class="section-header">Overview</div>
 					
-		<a class="toggle_collapse" content-id="main_info_content" id="main_info_content_start" starts-collapsed="False">Collapse</a>
+		<a class="toggle_collapse" content-id="overview_content" id="overview_content_start" starts-collapsed="False">Collapse</a>
 	
 				</div>
-				<div id="main_info_content" class="section-content">
+				<div id="overview_content" class="section-content">
 				<p>CryENGINE 3 exporter for Softimage.  </p>
 <ul>
 <li>Intuitive workflow for exporting.</li>
@@ -124,159 +126,5 @@ If python and pywin32 was installed correctly it should look something like
 </div>
 		
 		</div>
-		<script type="text/javascript">
-			window.onload = function() {
-				function shadeBlend(p,c0,c1) {
-    var n=p<0?p*-1:p,u=Math.round,w=parseInt;
-    if(c0.length>7){
-        var f=c0.split(","),t=(c1?c1:p<0?"rgb(0,0,0)":"rgb(255,255,255)").split(","),R=w(f[0].slice(4)),G=w(f[1]),B=w(f[2]);
-        return "rgb("+(u((w(t[0].slice(4))-R)*n)+R)+","+(u((w(t[1])-G)*n)+G)+","+(u((w(t[2])-B)*n)+B)+")"
-    }else{
-        var f=w(c0.slice(1),16),t=w((c1?c1:p<0?"#000000":"#FFFFFF").slice(1),16),R1=f>>16,G1=f>>8&0x00FF,B1=f&0x0000FF;
-        return "#"+(0x1000000+(u(((t>>16)-R1)*n)+R1)*0x10000+(u(((t>>8&0x00FF)-G1)*n)+G1)*0x100+(u(((t&0x0000FF)-B1)*n)+B1)).toString(16).slice(1)
-    }
-}
-
-var colors = [
-    "#ff7676", // reddish
-    // "#8d76ff", // darker violet
-    // "#d77f64", // orange
-    "#919ddb", // brighter blue
-    "#6AAF6A", // green
-];
-
-// Choose random hover color for all elments.
-var box_hover_color = colors[Math.floor(Math.random() * colors.length)];
-
-var box_darkened_color = shadeBlend(-0.3, box_hover_color);
-
-var box_brightened_color = shadeBlend(0.5, box_hover_color);
-
-var box_normal_color = "#252525";
-
-// I LOVE HACKS FeelsGoodMan
-var theme_map = {
-    "rgb(255, 255, 255)": "bright",
-    "rgb(0, 0, 0)": "dark",
-};
-
-var bg_color = $("head").css("background-color");
-var theme = theme_map[bg_color];
-
-var link_color_map_hover = {
-    "bright": box_darkened_color,
-    "dark": box_brightened_color,
-};
-
-$("div.content a").css({"color": box_hover_color, "border-bottom": "1px dotted " + box_hover_color});
-$("div.content a").hover(
-	function() {
-		$(this).css({"color": link_color_map_hover[theme],
-					"border-bottom": "1px solid " + link_color_map_hover[theme]});
-	},
-	function() {
-		$(this).css({"color": box_hover_color,
-					"border-bottom": "1px dotted " + box_hover_color,
-					"text-decoration": "none"});
-	});
-
-				function slideToggleContent(id) {
-    if (id.substr(0, 1) != "#") {
-        id = "#" + id;
-    }
-    var content = id + "_content";
-
-    $(content).slideToggle(250, function () {
-        $(content + "_start").text(function () {
-            return $(content).is(":visible") ? "Collapse" : "Expand";
-        })
-    });
-}
-
-function showContent(id) {
-    if (id.substr(0, 1) != "#") {
-        id = "#" + id;
-    }
-    var content = id + "_content";
-    if ($(content).is(":visible")) {
-        return;
-    }
-    $(content).slideToggle(250, function () {
-        $(content + "_start").text(function () {
-            return $(content).is(":visible") ? "Collapse" : "Expand";
-        })
-    });
-}
-
-$("a.toggle_collapse").click(function () {
-    var header = $(this);
-    var content = $("#" + $(this).attr("content-id"));
-
-    $(content).slideToggle(250, function () {
-
-        header.text(function () {
-
-            return $(content).is(":visible") ? "Collapse" : "Expand";
-        });
-    });
-
-});
-
-$("a.toggle_collapse_end").click(function () {
-    var header = $(this);
-    var content_text = "#" + $(this).attr("content-id");
-    var content = $("#" + $(this).attr("content-id"));
-
-    $(content).slideToggle(250, function () {
-        $(content_text + "_start").text(function () {
-            return $(content).is(":visible") ? "Collapse" : "Expand";
-        })
-    });
-
-});
-
-$("a.toggle_collapse").each(function () {
-    var header = $(this);
-    var content = $("#" + $(this).attr("content-id"));
-
-    if ($(this).attr("starts-collapsed") == "True") {
-        $(content).slideToggle(0, function () {
-
-            header.text(function () {
-
-                return $(content).is(":visible") ? "Collapse" : "Expand";
-            });
-        });
-    }
-});
-
-
-$("a.rectangle_button").click(function() {
-    var id = $(this).attr("href");
-    showContent(id);
-});
-
-
-$("a.rectangle_button").hover(
-    function() {
-        $(this).children("indent-child").css("visibility", "hidden");
-    },
-    function() {
-        $(this).children("indent-child").css("visibility", "visible");
-    }
-);
-
-
-$(document).ready(function () {
-    var parts = window.location.href.split("#");
-    if(parts.length > 1) {
-       var id = parts[ parts.length-1 ];
-       showContent(id);
-    }
-});
-
-				$("div .sidebar").css("background-color", box_hover_color);
-			};
-		</script>
 	</body>
 </html>
