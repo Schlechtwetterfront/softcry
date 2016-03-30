@@ -3,81 +3,127 @@
 	<head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <link rel="stylesheet" href="../css/styles.css">
-    <link rel="stylesheet" href="../css/schlechtwetterfront_dark.css">
-    <link rel="stylesheet" href="../css/schlechtwetterfront_light.css">
-    <!-- <link rel="stylesheet" href="../css/bootstrap.min.css"> -->
+    <!-- <link rel="stylesheet" href="../css/styles.css"> -->
+    <!-- <link rel="stylesheet" href="../css/schlechtwetterfront_dark.css"> -->
+    <!-- <link rel="stylesheet" href="../css/schlechtwetterfront_light.css"> -->
+    <link rel="stylesheet" href="../css/bootstrap.min.css">
+    <link rel="stylesheet" href="../css/shared.css">
+    <link rel="stylesheet" href="../css/site.css">
+    <link rel="stylesheet" href="../css/site-mainpage.css">
     <script src="../js/respond.js"></script>
     <script src="../js/jquery-1.11.0.min.js"></script>
-    <script src="../js/schlechtwetterfront_visual.js"></script>
+    <script src="../js/bootstrap.min.js"></script>
     <script src="../js/schlechtwetterfront_functional.js"></script>
-    <!-- <script src="../js/bootstrap.min.js"></script> -->
+    <script src="../js/schlechtwetterfront_visual.js"></script>
     <link rel="icon" type="image/png" href="../favicon.png"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>SoftCry</title>
 </head>
 	<body>
-		<div class="container">
-		
-			
+        <div class="container-fluid hidden-lg hidden-md">
+    <nav class="navbar" id="s-navbar">
+        <ul class="nav navbar-nav">
+            
+            <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Navigation</a>
+                <ul class="dropdown-menu">
+                
+                    <li><a href="#overview" class="rectangle-button rectangle-button-semi">Overview</a></li>
+                
+                    <li><a href="#download_installation" class="rectangle-button rectangle-button-semi">Download & Installation</a></li>
+                
+                    <li><a href="http://schlechtwetterfront.github.io/" class="rectangle-button rectangle-button-semi">Homepage</a></li>
+                
+                </ul>
+            
+            <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Downloads</a>
+                <ul class="dropdown-menu">
+                
+                    <li><a href="https://github.com/Schlechtwetterfront/softcry/releases" class="rectangle-button rectangle-button-semi">Releases</a></li>
+                
+                </ul>
+            
+            <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Other Resources</a>
+                <ul class="dropdown-menu">
+                
+                    <li><a href="https://github.com/Schlechtwetterfront/softcry" class="rectangle-button rectangle-button-semi">View on GitHub</a></li>
+                
+                    <li><a href="http://www.cryengine.com/community/viewtopic.php?f=315&t=102978" class="rectangle-button rectangle-button-semi">View Thread on CRYDEV</a></li>
+                
+                    <li><a href="http://www.youtube.com/watch?v=2Rt3B8h5EvE" class="rectangle-button rectangle-button-semi">Hardbody Animations (Video)</a></li>
+                
+                </ul>
+            
+            </li>
+        </ul>
+    </nav>
+</div>
+		<div class="container-fluid container-main">
+            <div class="row">
+    		
+    			
 
-<div class="sidebar">
-	<sidebar_title>SoftCry</sidebar_title>
-	<div class="hr_dark"></div>
-	<div id="sidebar-content">
-	
-		<category_label>Downloads</category_label><br>
-		
-		
-	        
-		<a class="rectangle-button rectangle-button-semi" href="https://github.com/Schlechtwetterfront/softcry/releases">Releases</a>
-	
-	    
-	    
-	    <!-- <div class="hr-sidebar-dark"></div> -->
-	
-		<category_label>Navigation</category_label><br>
-		
-		
-	        
+<div class="col-md-2" role="complementary">
+	<nav class="affix hidden-xs hidden-sm">
+		<div class="sidebar">
+			<div class="sidebar-title">SoftCry</div>
+			<div class="hr"></div>
+			<div id="sidebar-content">
+			
+				<div class="category_label">Navigation</div>
+				
+				
+			        
 		<a class="rectangle-button rectangle-button-semi" href="#overview">Overview</a>
 	
-	    
-	        
+			    
+			        
 		<a class="rectangle-button rectangle-button-semi" href="#download_installation">Download & Installation</a>
 	
-	    
-	        
+			    
+			        
 		<a class="rectangle-button rectangle-button-semi" href="http://schlechtwetterfront.github.io/">Homepage</a>
 	
-	    
-	    
-	    <!-- <div class="hr-sidebar-dark"></div> -->
+			    
+			    
+			
+				<div class="category_label">Downloads</div>
+				
+				
+			        
+		<a class="rectangle-button rectangle-button-semi" href="https://github.com/Schlechtwetterfront/softcry/releases">Releases</a>
 	
-		<category_label>Other Resources</category_label><br>
-		
-		
-	        
+			    
+			    
+			
+				<div class="category_label">Other Resources</div>
+				
+				
+			        
 		<a class="rectangle-button rectangle-button-semi" href="https://github.com/Schlechtwetterfront/softcry">View on GitHub</a>
 	
-	    
-	        
+			    
+			        
 		<a class="rectangle-button rectangle-button-semi" href="http://www.cryengine.com/community/viewtopic.php?f=315&t=102978">View Thread on CRYDEV</a>
 	
-	    
-	        
+			    
+			        
 		<a class="rectangle-button rectangle-button-semi" href="http://www.youtube.com/watch?v=2Rt3B8h5EvE">Hardbody Animations (Video)</a>
 	
-	    
-	    
-	    <!-- <div class="hr-sidebar-dark"></div> -->
-	
-	</div>
-</div>
+			    
+			    
 			
+			</div>
+		</div>
+	</nav>
+</div>
+    			
 
-<div class="content">
+<!-- <div class="content"> -->
+<div class="col-md-10 section-container" role="main">
 	
 		<div class="section">
 			<a name="overview"></a>
@@ -114,10 +160,10 @@
 				<!-- </div> -->
 				<div id="download_installation_content" class="section-content">
 				<p>Check the sidebar for a link to the releases page on GitHub.</p>
-<p>To install SoftCry, unzip the downloaded archive into<br />
-<strong>C:/users/%user%/Autodesk/Softimage_%version%/Addons/</strong><br />
-OR<br />
-<strong>C:/users/%user%/Softimage/Softimage_%version%/Addons/</strong>.<br />
+<p>To install SoftCry, unzip the downloaded archive into
+<code>C:/users/%user%/Autodesk/Softimage_%version%/Addons/</code>
+OR
+<code>C:/users/%user%/Softimage/Softimage_%version%/Addons/</code>.
 Make sure you use this path and not the factory addon path.  </p>
 <p>If you have any Softimage version up to (and including) 2010 you need to install
 <a href="http://www.python.org/ftp/python/2.6.6/python-2.6.6.msi">python</a>
@@ -133,7 +179,8 @@ If python and pywin32 was installed correctly it should look something like
 		</div>
 	
 </div>
-		
+    		
+            </div>
 		</div>
 	</body>
 </html>
